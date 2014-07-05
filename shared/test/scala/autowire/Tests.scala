@@ -17,6 +17,7 @@ object Controller{
   var r = 1
   @rpc def multiply(x: Double, ys: Seq[Double]): String = x + ys.map("*"+_).mkString
   @rpc def add(x: Int, y: Int = r + 1, z: Int = 10): String = s"$x+$y+$z"
+  @rpc def sloww(s: Seq[String]): Future[Seq[Int]] = Future.successful(s.map(_.length))
   def subtract(x: Int, y: Int = r + 1): String = s"$x-$y"
 }
 
@@ -25,7 +26,8 @@ object Handler extends autowire.Handler[rpc]{
   case class NoSuchRoute(msg: String) extends Exception(msg)
   def callRequest(r: Request) = {
     router.lift(r)
-          .fold[Future[String]](Future.failed(new NoSuchRoute("nope!")))(Future.successful)
+          .getOrElse(Future.failed(new NoSuchRoute("nope!")))
+
   }
 }
 
@@ -49,6 +51,10 @@ object Tests extends TestSuite{
         res4 == "1.2*2.3",
         res5 == "1.1*2.2*3.3*4.4"
       )
+    }
+    'async{
+      val res5 = await(Handler(Controller.sloww(Seq("omgomg", "wtf"))))
+      assert(res5 == Seq(6, 3))
     }
     'compilationFailures{
       'notWebFails{

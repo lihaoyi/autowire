@@ -11,6 +11,15 @@ object Macros {
     import c.universe._
     c.prefix.actualType.baseType(typeOf[Handler[_]].typeSymbol).typeArgs(0)
   }
+
+  def futurize(c: Context)(t: c.Tree, member: c.Symbol) = {
+    import c.universe._
+    if (member.asMethod.returnType <:< c.typeOf[Future[_]]) {
+      t
+    } else {
+      q"scala.concurrent.Future.successful($t)"
+    }
+  }
   def ajaxMacro[R: c.WeakTypeTag]
                (c: Context)
                (f: c.Expr[R])
@@ -121,14 +130,16 @@ object Macros {
         }
         .toList
 
-      val frag = cq"""
+
+      val frag =
+        cq"""
           autowire.Request(Seq(..$path), args) =>
-            upickle.write($singleton.$member(..$args))
+          ${futurize(c)(q"$singleton.$member(..$args)", member)}.map(upickle.write(_))
         """
       frag
     }
     val res = q"{case ..$routes}: autowire.RouteType"
-//    println(res)
+    println(res)
     c.Expr[RouteType](res)
   }
 }
