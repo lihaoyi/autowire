@@ -19,11 +19,12 @@ object Macros {
 
     import c.universe._
     val markerType = handlerTypeParam(c)
-    def handle(t: Tree): Tree = {
+    def handle(t: Tree, dead: Set[Name] = Set.empty): Tree = {
       t match {
         case t @ q"$prefix.$method(..$args)"
           if prefix.symbol != null
           && prefix.symbol.isModule =>
+
           if (!t.symbol.asMethod.annotations.exists(_.tree.tpe =:= markerType)) {
             c.abort(
               c.enclosingPosition,
@@ -37,16 +38,40 @@ object Macros {
                              .toSeq
                              .:+(method.toString)
 
-            val pickled = args.map(e => q"upickle.write($e)")
+            val pickled = args.zip(t.symbol.asMethod.paramLists.flatten)
+                              .filter{
+                                case (Ident(name), _) => !dead(name)
+                                case _ => true
+                              }
+                              .map{case (t, param: Symbol) => q"${param.name.toString} -> upickle.write($t)"}
             q"""(
               ${c.prefix.tree}.callRequest(
-                autowire.Request(Seq(..$path), Seq(..$pickled)))
-              ).map(upickle.read(_)($reader)
+                autowire.Request(Seq(..$path), Map(..$pickled))
+              ).map(upickle.read(_)($reader))
             )"""
           }
 
-        case q"..$statements" if statements.length > 1=>
-          q"..${statements.dropRight(1)}; ${handle(statements.last)}"
+        case q"..${statements: List[ValDef]}; $last"
+          if statements.length > 0
+          && statements.forall(ValDef.unapply(_).isDefined) =>
+
+          // Look for statements involving the use of default arguments,
+          // and remove them and mark their names as dead
+          val (lessStatements, deadStatements) =
+            statements.partition {
+              case ValDef(mod, _, _, Select(singleton, name))
+                if name.toString.contains("$default") =>
+                false
+              case _ => true
+            }
+
+          q"""
+            ..$lessStatements;
+            ${handle(
+              last,
+              deadStatements.map(_.name).toSet
+            )}
+          """
         case _ =>
           c.abort(
             c.enclosingPosition,
@@ -76,17 +101,27 @@ object Macros {
       if member.annotations.exists(_.tree.tpe =:= weakTypeOf[A])
     } yield {
       val path = tree.symbol.fullName.toString.split('.').toSeq :+ member.name.toString
+
       val args = member
-        .typeSignature.paramLists.flatten
+        .typeSignature
+        .paramLists
+        .flatten
         .zipWithIndex
-        .map{ case (arg, i) => q"upickle.read[${arg.typeSignature}](args($i))"}
+        .map{
+          case (arg, i) =>
+            val defaultName = s"${member.name}$$default$$${i+1}"
+            if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
+              q"args.get(${arg.name.toString}).fold($singleton.${TermName(defaultName)})(upickle.read[${arg.typeSignature}](_))"
+            else
+              q"upickle.read[${arg.typeSignature}](args(${arg.name.toString}))"
+        }
         .toList
 
-      val frag = cq"Request(Seq(..$path), args) => upickle.write($singleton.$member(..$args))"
+      val frag = cq"autowire.Request(Seq(..$path), args) => upickle.write($singleton.$member(..$args))"
       frag
     }
     val res = q"{case ..$routes}: RouteType"
-
+//    println(res)
     c.Expr[RouteType](res)
   }
 }

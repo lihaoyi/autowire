@@ -6,8 +6,7 @@ package object autowire {
 
 
   type RouteType = PartialFunction[Request, String]
-  case class Request(path: Seq[String], args: Seq[String])
-
+  case class Request(path: Seq[String], args: Map[String, String])
 
   abstract class Handler[T]{
     def call[R: upickle.Reader](f: R): Future[R] = macro Macros.ajaxMacro[R]
