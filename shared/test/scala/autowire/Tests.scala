@@ -15,7 +15,7 @@ final class rpc extends Annotation
 
 object Controller{
   var r = 1
-  @rpc def multiply(x: Double, y: Double): String = s"$x*$y"
+  @rpc def multiply(x: Double, ys: Seq[Double]): String = x + ys.map("*"+_).mkString
   @rpc def add(x: Int, y: Int = r + 1, z: Int = 10): String = s"$x+$y+$z"
   def subtract(x: Int, y: Int = r + 1): String = s"$x-$y"
 }
@@ -25,7 +25,7 @@ object Handler extends autowire.Handler[rpc]{
   case class NoSuchRoute(msg: String) extends Exception(msg)
   def callRequest(r: Request) = {
     router.lift(r)
-      .fold[Future[String]](Future.failed(new NoSuchRoute("nope!")))(Future.successful)
+          .fold[Future[String]](Future.failed(new NoSuchRoute("nope!")))(Future.successful)
   }
 }
 
@@ -35,28 +35,74 @@ object Tests extends TestSuite{
   def await[T](f: Future[T]) = Await.result(f, 10 seconds)
 
   val tests = TestSuite{
-    "basicCalls" - {
-      val res1 = await(Handler.call(Controller.add(1, z = 3)))
-      val res2 = await(Handler.call(Controller.add(1)))
-      val res3 = await(Handler.call(Controller.add(1, 2)))
-      val res4 = await(Handler.call(Controller.multiply(x = 1.2, 2.3)))
+    'basicCalls{
+      val res1 = await(Handler(Controller.add(1, z = 3)))
+      val res2 = await(Handler(Controller.add(1)))
+      val res3 = await(Handler(Controller.add(1, 2)))
+      val res4 = await(Handler(Controller.multiply(x = 1.2, Seq(2.3))))
+      val res5 = await(Handler(Controller.multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4))))
 
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
         res3 == "1+2+10",
-        res4 == "1.2*2.3"
+        res4 == "1.2*2.3",
+        res5 == "1.1*2.2*3.3*4.4"
       )
     }
-    "notWebFails" - {
-      import shapeless.test.illTyped
-      illTyped { """Handler.call(Controller.subtract(1, 2))""" }
+    'compilationFailures{
+      'notWebFails{
+        import shapeless.test.illTyped
+        illTyped { """Handler.call(Controller.subtract(1, 2))""" }
+      }
+      'notSimpleCallFails{
+        import shapeless.test.illTyped
+        illTyped { """Handler.call(1 + 1 + "")""" }
+        illTyped { """Handler.call(1)""" }
+        illTyped { """Handler.call(Thread.sleep(lols))""" }
+      }
     }
-    "notSimpleCallFails" - {
-      import shapeless.test.illTyped
-      illTyped { """Handler.call(1 + 1 + "")""" }
-      illTyped { """Handler.call(1)""" }
-      illTyped { """Handler.call(Thread.sleep(lols))""" }
+    'runtimeFailures{
+      'noSuchRoute{
+        val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
+        assert(!Handler.router.isDefinedAt(badRequest))
+        intercept[MatchError] {
+          Handler.router(badRequest)
+        }
+      }
+      'inputError{
+        'keysMissing {
+          val badRequest = Request(Seq("autowire", "Controller", "multiply"), Map.empty)
+          assert(Handler.router.isDefinedAt(badRequest))
+          intercept[InputError] {
+            Handler.router(badRequest)
+          }
+        }
+        'keysInvalid{
+          val badRequest = Request(
+            Seq("autowire", "Controller", "multiply"),
+            Map("x" -> "[]", "ys" -> "[\"1\", \"2\"]")
+          )
+          assert(Handler.router.isDefinedAt(badRequest))
+          val InputError(
+            upickle.Invalid.Data(upickle.Js.Array(Nil), "Number")
+          ) = intercept[InputError] {
+            Handler.router(badRequest)
+          }
+        }
+        'invalidJson{
+          val badRequest = Request(
+            Seq("autowire", "Controller", "multiply"),
+            Map("x" -> "[", "ys" -> "[\"1\", \"2\"]")
+          )
+          assert(Handler.router.isDefinedAt(badRequest))
+          val InputError(
+            upickle.Invalid.Json(_, _, _, _)
+          ) = intercept[InputError] {
+            Handler.router(badRequest)
+          }
+        }
+      }
     }
   }
 }

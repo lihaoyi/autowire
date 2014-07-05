@@ -110,17 +110,24 @@ object Macros {
         .map{
           case (arg, i) =>
             val defaultName = s"${member.name}$$default$$${i+1}"
+            def get(t: Tree) = q"""
+              args.get(${arg.name.toString}).fold($t)(x => autowire.wrapInvalid(upickle.read[${arg.typeSignature}](x)))
+            """
             if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
-              q"args.get(${arg.name.toString}).fold($singleton.${TermName(defaultName)})(upickle.read[${arg.typeSignature}](_))"
+              get(q"$singleton.${TermName(defaultName)}")
             else
-              q"upickle.read[${arg.typeSignature}](args(${arg.name.toString}))"
+              get(q"throw new autowire.InputError(new Exception())")
+
         }
         .toList
 
-      val frag = cq"autowire.Request(Seq(..$path), args) => upickle.write($singleton.$member(..$args))"
+      val frag = cq"""
+          autowire.Request(Seq(..$path), args) =>
+            upickle.write($singleton.$member(..$args))
+        """
       frag
     }
-    val res = q"{case ..$routes}: RouteType"
+    val res = q"{case ..$routes}: autowire.RouteType"
 //    println(res)
     c.Expr[RouteType](res)
   }
