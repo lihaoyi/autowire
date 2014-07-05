@@ -16,8 +16,7 @@ object Build extends sbt.Build{
     scalaVersion := "2.11.0",
     libraryDependencies ++= Seq(
       compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.chuusai" %% "shapeless" % "2.0.0" % "test"
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
     ) ++ qq(scalaVersion.value),
     // Sonatype
@@ -50,11 +49,20 @@ object Build extends sbt.Build{
   lazy val root = cross.root
 
   lazy val js = cross.js.settings(
-    libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.1.3"
+    resolvers ++= Seq(
+      "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
+    ),
+    libraryDependencies ++= Seq(
+      "name.myltsev" %%% "parboiled" % "2.0.0" % "test",
+      "com.lihaoyi" %%% "upickle" % "0.1.3"
+    )
   )
 
   lazy val jvm = cross.jvm.settings(
-    libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.1.3"
+    libraryDependencies ++= Seq(
+      "com.chuusai" %% "shapeless" % "2.0.0" % "test",
+      "com.lihaoyi" %% "upickle" % "0.1.3"
+    )
   )
 }
 

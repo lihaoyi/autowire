@@ -2,7 +2,7 @@ package autowire
 import utest._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import concurrent.ExecutionContext.Implicits.global
+import utest.ExecutionContext.RunNow
 import upickle.Implicits._
 import scala.annotation.Annotation
 

@@ -11,4 +11,4 @@ And routing of calls on the other end is done via the `route` macro
 
 ```scala
 def route(handlers: Singleton*): Future[T]
-```
+```sbt gen-idea
