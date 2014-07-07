@@ -14,7 +14,7 @@ class ClientProxy[T, A](h: Client[A]){
 }
 ```
 
-And routing of calls on the other end is done via the `route` macro
+And routing of calls on the other end done via the `route` macro
 
 ```scala
 def route(handlers: Singleton*): PartialFunction[Request, Future[String]]
@@ -26,7 +26,7 @@ With the `Request` data structure being defined as
 case class Request(path: Seq[String], args: Map[String, String])
 ```
 
-This allows you to safely wire up disparate endpoints across the internet, taking care of all the serialization for you using uPickle, while still giving your full control of piping the data across some underlying transport (Ajax, tcp, etc.). As long as you are able to transmit the `Request` from the client and can provide a `Request` to `route`'s partial function, Autowire doesn't care how you do it.
+This allows you to safely wire up disparate endpoints across the internet, taking care of all the serialization for you using [uPickle](https://github.com/lihaoyi/upickle), while still giving your full control of piping the data across some underlying transport (Ajax, tcp, etc.). As long as you are able to transmit the `Request` from the client and can provide a `Request` to `route`'s partial function, Autowire doesn't care how you do it.
 
 Minimal Example
 ===============
@@ -142,6 +142,7 @@ Autowire aims to solve all these problems:
 
 ```scala
 Post[Api](_.fastOp(editor.code))
+
 [error] /Client.scala:104: value fastOp is not a member of fiddle.Api
 [error]     Post[Api](_.fastOp(editor.code))
 [error]                 ^
@@ -182,4 +183,6 @@ Autowire is available at the following maven coordinates, for Scala-JVM and Scal
 "com.lihaoyi" %% "autowire" % "0.1.0"
 "com.lihaoyi" %%% "autowire" % "0.1.0"
 ```
+
+It's only available for Scala 2.11.x
 
