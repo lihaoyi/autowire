@@ -3,8 +3,6 @@ import scala.concurrent.Future
 import language.experimental.macros
 
 package object autowire {
-
-
   case class InputError(ex: Exception) extends Exception
 
   def wrapInvalid[T](f: => T): T = {
@@ -18,13 +16,13 @@ package object autowire {
   type RouteType = PartialFunction[Request, Future[String]]
   case class Request(path: Seq[String], args: Map[String, String])
 
-  class Func[T, A](h: Handler[A]){
+  class ClientProxy[T, A](h: Client[A]){
     def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
     def callRequest(req: Request): Future[String] = h.callRequest(req)
   }
 
-  abstract class Handler[R]{
-    def apply[T]: Func[T, R] = new Func(this)
+  abstract class Client[R]{
+    def apply[T]: ClientProxy[T, R] = new ClientProxy(this)
     def callRequest(req: Request): Future[String]
   }
 }

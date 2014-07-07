@@ -6,9 +6,7 @@ import utest.ExecutionContext.RunNow
 import upickle.Implicits._
 import scala.annotation.Annotation
 
-
-
-// A trivial little system of annotation/controller/router/handler
+// A trivial little system of annotation/controller/router/Client
 // that can be used to test out the serialization/deserialization
 // properties of autowire, but with everything running locally.
 class Rpc extends Annotation
@@ -19,6 +17,11 @@ trait Api{
   def add(x: Int, y: Int = 1 + 1, z: Int = 10): String
   def sloww(s: Seq[String]): Future[Seq[Int]]
 }
+
+trait FakeApi{
+  def omg(x: Int): Int
+}
+
 object Controller extends Api{
   def multiply(x: Double, ys: Seq[Double]): String = x + ys.map("*"+_).mkString
   def add(x: Int, y: Int = 1 + 1, z: Int = 10): String = s"$x+$y+$z"
@@ -26,7 +29,7 @@ object Controller extends Api{
   def subtract(x: Int, y: Int = 1 + 1): String = s"$x-$y"
 }
 
-object Handler extends autowire.Handler[Rpc]{
+object Client extends autowire.Client[Rpc]{
   val router = Macros.route[Rpc](Controller)
   case class NoSuchRoute(msg: String) extends Exception(msg)
 
@@ -36,7 +39,6 @@ object Handler extends autowire.Handler[Rpc]{
   }
 }
 
-
 object Tests extends TestSuite{
 
   def await[T](f: Future[T]) = Await.result(f, 10 seconds)
@@ -44,11 +46,11 @@ object Tests extends TestSuite{
   val tests = TestSuite{
     'basicCalls{
 
-      val res1 = await(Handler[Api](_.add(1, 2, 3)))
-      val res2 = await(Handler[Api](_.add(1)))
-      val res3 = await(Handler[Api](_.add(1, 2)))
-      val res4 = await(Handler[Api](_.multiply(x = 1.2, Seq(2.3))))
-      val res5 = await(Handler[Api](_.multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4))))
+      val res1 = await(Client[Api](_.add(1, 2, 3)))
+      val res2 = await(Client[Api](_.add(1)))
+      val res3 = await(Client[Api](_.add(1, 2)))
+      val res4 = await(Client[Api](_.multiply(x = 1.2, Seq(2.3))))
+      val res5 = await(Client[Api](_.multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4))))
 
       assert(
         res1 == "1+2+3",
@@ -59,40 +61,41 @@ object Tests extends TestSuite{
       )
     }
     'aliased{
-      val api = Handler[Api]
+      val api = Client[Api]
       val res = await(api(_.add(1, 2, 4)))
       assert(res == "1+2+4")
     }
 //    'async{
-//      val res5 = await(Handler[Api](_.sloww(Seq("omgomg", "wtf"))))
+//      val res5 = await(Client[Api](_.sloww(Seq("omgomg", "wtf"))))
 //      assert(res5 == Seq(6, 3))
 //    }
     'compilationFailures{
       'notWebFails{
         import shapeless.test.illTyped
-        illTyped { """Handler[Api](x => Controller.subtract(1, 2))""" }
+        illTyped { """Client[Api](x => Controller.subtract(1, 2))""" }
+        illTyped { """Client[FakeApi](_.omg(1))""" }
       }
       'notSimpleCallFails{
         import shapeless.test.illTyped
-        illTyped { """Handler[Api](x => 1 + 1 + "")""" }
-        illTyped { """Handler[Api](x => 1)""" }
-        illTyped { """Handler[Api](x => Thread.sleep(lols))""" }
+        illTyped { """Client[Api](x => 1 + 1 + "")""" }
+        illTyped { """Client[Api](x => 1)""" }
+        illTyped { """Client[Api](x => Thread.sleep(lols))""" }
       }
     }
     'runtimeFailures{
       'noSuchRoute{
         val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
-        assert(!Handler.router.isDefinedAt(badRequest))
+        assert(!Client.router.isDefinedAt(badRequest))
         intercept[MatchError] {
-          Handler.router(badRequest)
+          Client.router(badRequest)
         }
       }
       'inputError{
         'keysMissing {
           val badRequest = Request(Seq("autowire", "Api", "multiply"), Map.empty)
-          assert(Handler.router.isDefinedAt(badRequest))
+          assert(Client.router.isDefinedAt(badRequest))
           intercept[InputError] {
-            Handler.router(badRequest)
+            Client.router(badRequest)
           }
         }
         'keysInvalid{
@@ -100,11 +103,11 @@ object Tests extends TestSuite{
             Seq("autowire", "Api", "multiply"),
             Map("x" -> "[]", "ys" -> "[1, 2]")
           )
-          assert(Handler.router.isDefinedAt(badRequest))
+          assert(Client.router.isDefinedAt(badRequest))
           val InputError(
             upickle.Invalid.Data(upickle.Js.Array(Nil), "Number")
           ) = intercept[InputError] {
-            Handler.router(badRequest)
+            Client.router(badRequest)
           }
         }
         'invalidJson{
@@ -112,11 +115,11 @@ object Tests extends TestSuite{
             Seq("autowire", "Api", "multiply"),
             Map("x" -> "[", "ys" -> "[1, 2]")
           )
-          assert(Handler.router.isDefinedAt(badRequest))
+          assert(Client.router.isDefinedAt(badRequest))
           val InputError(
             upickle.Invalid.Json(_, _, _, _)
           ) = intercept[InputError] {
-            Handler.router(badRequest)
+            Client.router(badRequest)
           }
         }
       }
