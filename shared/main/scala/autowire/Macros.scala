@@ -29,7 +29,11 @@ object Macros {
         val markerType = c.prefix.actualType.typeArgs(1)
         def handle(t: Tree, dead: Set[Name] = Set.empty): Tree = {
           t match {
-            case t @ q"($src1) => $src2.$method(..$args)" =>
+            case t @ q"($src1) => $lol" =>
+              println("----- Removing Function " + t)
+              handle(lol)
+            case t @ q"$src2.$method(..$args)" =>
+              println("----- Munging Call " + t)
               if (!(src2: Tree).tpe.typeSymbol.annotations.exists(_.tree.tpe =:= markerType)) {
                 c.abort(
                   c.enclosingPosition,
@@ -43,12 +47,14 @@ object Macros {
                   .split('.')
                   .toSeq
                   .:+(method.toString)
-                println()
-                val pickled = args.zip(t.asInstanceOf[Function].body.symbol.asMethod.paramLists.flatten)
+                println(":::: " + args.zip(t.symbol.asMethod.paramLists.flatten))
+                val pickled = args.zip(t.symbol.asMethod.paramLists.flatten)
                   .filter{
-                  case (Ident(name), _) => !dead(name)
-                  case _ => true
-                }
+                    case (Ident(name), _) => !dead(name)
+                    case (q"$thing.$name", _) if name.toString.contains("$default$") => false
+                    case _ => true
+                  }
+
                   .map{case (t, param: Symbol) => q"${param.name.toString} -> upickle.write($t)"}
 
 
@@ -62,10 +68,10 @@ object Macros {
 
 
 
-            case q"..${statements: List[ValDef]}; $last"
+            case t @ q"..${statements: List[ValDef]}; $last"
               if statements.length > 0
-                && statements.forall(ValDef.unapply(_).isDefined) =>
-
+              && statements.forall(ValDef.unapply(_).isDefined) =>
+              println("----- Handling Defaults " + t)
               // Look for statements involving the use of default arguments,
               // and remove them and mark their names as dead
               val (lessStatements, deadStatements) =
@@ -93,11 +99,11 @@ object Macros {
         }
         println("f.tree " + f.tree)
         val res = c.Expr[Future[R]](handle(f.tree))
-        //    println("RESSS")
-        //    println(res)
+            println("RESSS")
+            println(res)
         res
       case _ =>
-        c.abort(c.enclosingPosition, "Failed")
+        c.abort(c.enclosingPosition, "FAIL")
     }
 
 

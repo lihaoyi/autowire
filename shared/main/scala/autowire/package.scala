@@ -20,6 +20,7 @@ package object autowire {
 
   sealed trait Func[T, A]{
     def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
+//    def apply[R: upickle.Reader](f: T => Future[R]): Future[R] = macro Macros.ajaxMacro[R]
   }
 
   abstract class Handler[R]{
