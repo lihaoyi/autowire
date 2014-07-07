@@ -1,4 +1,4 @@
-import scala.annotation.Annotation
+import scala.annotation.{compileTimeOnly, Annotation}
 import scala.concurrent.Future
 import language.experimental.macros
 
@@ -18,9 +18,13 @@ package object autowire {
   type RouteType = PartialFunction[Request, Future[String]]
   case class Request(path: Seq[String], args: Map[String, String])
 
-  abstract class Handler[T]{
-    def apply[R: upickle.Reader](f: R): Future[R] = macro Macros.ajaxMacro[R]
-    def apply[R: upickle.Reader](f: Future[R]): Future[R] = macro Macros.ajaxMacro[R]
+  sealed trait Func[T, A]{
+    def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
+  }
+
+  abstract class Handler[R]{
+    @compileTimeOnly("Lols")
+    def apply[T]: Func[T, R] = ???
     def callRequest(req: Request): Future[String]
   }
 }

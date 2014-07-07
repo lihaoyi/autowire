@@ -11,9 +11,9 @@ object Build extends sbt.Build{
   val cross = new utest.jsrunner.JsCrossBuild(
     organization := "com.lihaoyi",
 
-    version := "0.1.0-SNAPSHOT",
+    version := "0.1.0",
     name := "autowire",
-    scalaVersion := "2.11.0",
+    scalaVersion := "2.11.1",
     libraryDependencies ++= Seq(
       compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
       "org.scala-lang" % "scala-reflect" % scalaVersion.value
@@ -54,14 +54,14 @@ object Build extends sbt.Build{
     ),
     libraryDependencies ++= Seq(
       "name.myltsev" %%% "parboiled" % "2.0.0" % "test",
-      "com.lihaoyi" %%% "upickle" % "0.1.3"
+      "com.lihaoyi" %%% "upickle" % "0.1.4"
     )
   )
 
   lazy val jvm = cross.jvm.settings(
     libraryDependencies ++= Seq(
       "com.chuusai" %% "shapeless" % "2.0.0" % "test",
-      "com.lihaoyi" %% "upickle" % "0.1.3"
+      "com.lihaoyi" %% "upickle" % "0.1.4"
     )
   )
 }

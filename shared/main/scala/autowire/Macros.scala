@@ -7,10 +7,6 @@ import scala.annotation.Annotation
 import scala.collection.mutable
 
 object Macros {
-  def handlerTypeParam(c: Context) = {
-    import c.universe._
-    c.prefix.actualType.baseType(typeOf[Handler[_]].typeSymbol).typeArgs(0)
-  }
 
   def futurize(c: Context)(t: c.Tree, member: c.Symbol) = {
     import c.universe._
@@ -27,73 +23,84 @@ object Macros {
                : c.Expr[Future[R]] = {
 
     import c.universe._
-    val markerType = handlerTypeParam(c)
-    def handle(t: Tree, dead: Set[Name] = Set.empty): Tree = {
-      t match {
-        case t @ q"$prefix.$method(..$args)"
-          if prefix.symbol != null
-          && prefix.symbol.isModule =>
 
-          if (!t.symbol.asMethod.annotations.exists(_.tree.tpe =:= markerType)) {
-            c.abort(
-              c.enclosingPosition,
-              s"You can only make calls to functions marked as @$markerType"
-            )
-          } else {
-            val path = prefix.symbol
-                             .fullName
-                             .toString
-                             .split('.')
-                             .toSeq
-                             .:+(method.toString)
+    c.prefix.tree match {
+      case t @ q"$module.apply[$tpe]" =>
+        val markerType = c.prefix.actualType.typeArgs(1)
+        def handle(t: Tree, dead: Set[Name] = Set.empty): Tree = {
+          t match {
+            case t @ q"($src1) => $src2.$method(..$args)" =>
+              if (!(src2: Tree).tpe.typeSymbol.annotations.exists(_.tree.tpe =:= markerType)) {
+                c.abort(
+                  c.enclosingPosition,
+                  s"You can only make calls to traits marked as @$markerType"
+                )
+              } else {
+                val path = src2
+                  .tpe
+                  .widen
+                  .toString
+                  .split('.')
+                  .toSeq
+                  .:+(method.toString)
+                println()
+                val pickled = args.zip(t.asInstanceOf[Function].body.symbol.asMethod.paramLists.flatten)
+                  .filter{
+                  case (Ident(name), _) => !dead(name)
+                  case _ => true
+                }
+                  .map{case (t, param: Symbol) => q"${param.name.toString} -> upickle.write($t)"}
 
-            val pickled = args.zip(t.symbol.asMethod.paramLists.flatten)
-                              .filter{
-                                case (Ident(name), _) => !dead(name)
-                                case _ => true
-                              }
-                              .map{case (t, param: Symbol) => q"${param.name.toString} -> upickle.write($t)"}
-            q"""(
-              ${c.prefix.tree}.callRequest(
-                autowire.Request(Seq(..$path), Map(..$pickled))
-              ).map(upickle.read(_)($reader))
-            )"""
-          }
 
-        case q"..${statements: List[ValDef]}; $last"
-          if statements.length > 0
-          && statements.forall(ValDef.unapply(_).isDefined) =>
+                println(c.prefix.tree)
+                q"""(
+                  $module.callRequest(
+                    autowire.Request(Seq(..$path), Map(..$pickled))
+                  ).map(upickle.read(_)($reader))
+                )"""
+              }
 
-          // Look for statements involving the use of default arguments,
-          // and remove them and mark their names as dead
-          val (lessStatements, deadStatements) =
-            statements.partition {
-              case ValDef(mod, _, _, Select(singleton, name))
-                if name.toString.contains("$default") =>
-                false
-              case _ => true
-            }
 
-          q"""
+
+            case q"..${statements: List[ValDef]}; $last"
+              if statements.length > 0
+                && statements.forall(ValDef.unapply(_).isDefined) =>
+
+              // Look for statements involving the use of default arguments,
+              // and remove them and mark their names as dead
+              val (lessStatements, deadStatements) =
+                statements.partition {
+                  case ValDef(mod, _, _, Select(singleton, name))
+                    if name.toString.contains("$default") =>
+                    false
+                  case _ => true
+                }
+
+              q"""
             ..$lessStatements;
             ${handle(
-              last,
-              deadStatements.map(_.name).toSet
-            )}
+                last,
+                deadStatements.map(_.name).toSet
+              )}
           """
-        case _ =>
-          c.abort(
-            c.enclosingPosition,
-            "Invalid contents: contents of a `call` must be a single function call " +
-            s"to a method on a top-level object marked with @$markerType"
-          )
-      }
+            case _ =>
+              c.abort(
+                c.enclosingPosition,
+                "Invalid contents: contents of a `call` must be a single function call " +
+                  s"to a method on a top-level object marked with @$markerType"
+              )
+          }
+        }
+        println("f.tree " + f.tree)
+        val res = c.Expr[Future[R]](handle(f.tree))
+        //    println("RESSS")
+        //    println(res)
+        res
+      case _ =>
+        c.abort(c.enclosingPosition, "Failed")
     }
 
-    val res = c.Expr[Future[R]](handle(f.tree))
-//    println("RESSS")
-//    println(res)
-    res
+
   }
   def route[A](f: scala.Singleton*): RouteType = macro routeMacro[A]
   def routeMacro[A: c.WeakTypeTag]
@@ -106,10 +113,23 @@ object Macros {
     val routes: Seq[Tree] = for{
       singleton <- f
       tree = singleton.tree
-      member <- tree.symbol.asModule.typeSignature.members
-      if member.annotations.exists(_.tree.tpe =:= weakTypeOf[A])
+      t = singleton.tree.symbol.asInstanceOf[ModuleSymbol]
+      apiClass = singleton
+        .tree
+        .symbol
+        .asModule
+        .moduleClass
+        .asClass
+        .baseClasses
+        .find(_.annotations.exists(_.tree.tpe =:= weakTypeOf[A]))
+        .get
+      member <- apiClass.typeSignature.members
+      // not some rubbish defined on AnyRef
+      if !weakTypeOf[AnyRef].members.exists(_.name == member.name)
+      // Not a default value synthemethod
+      if !member.isSynthetic
     } yield {
-      val path = tree.symbol.fullName.toString.split('.').toSeq :+ member.name.toString
+      val path = apiClass.fullName.toString.split('.').toSeq :+ member.name.toString
 
       val args = member
         .typeSignature
