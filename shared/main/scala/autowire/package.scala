@@ -18,14 +18,13 @@ package object autowire {
   type RouteType = PartialFunction[Request, Future[String]]
   case class Request(path: Seq[String], args: Map[String, String])
 
-  sealed trait Func[T, A]{
+  class Func[T, A](h: Handler[A]){
     def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
-//    def apply[R: upickle.Reader](f: T => Future[R]): Future[R] = macro Macros.ajaxMacro[R]
+    def callRequest(req: Request): Future[String] = h.callRequest(req)
   }
 
   abstract class Handler[R]{
-    @compileTimeOnly("Lols")
-    def apply[T]: Func[T, R] = ???
+    def apply[T]: Func[T, R] = new Func(this)
     def callRequest(req: Request): Future[String]
   }
 }
