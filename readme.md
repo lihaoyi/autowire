@@ -1,8 +1,19 @@
 Autowire 0.1.0
 ==============
 
-Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire provides two main primitives: a macro for type safe RPC calls
- 
+Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
+
+
+```scala    
+Client[Api](_.add(1, 2, 3): T): Future[T]
+//          |     |             |
+//          |     |             The T is pickled and wrapped in a Future[T]
+//          |     The arguments to that method are pickled automatically
+//          Call a method on the `Api` trait
+```
+
+To do this, it provides two macros: one for the client to make these type-safe calls which are then marshalled into RPCs
+
 ```scala
 abstract class Client[R]{
   def apply[T]: ClientProxy[T, R] = new ClientProxy(this)
