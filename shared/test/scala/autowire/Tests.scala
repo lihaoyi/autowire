@@ -3,7 +3,7 @@ import utest._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import utest.ExecutionContext.RunNow
-import upickle.Implicits._
+import upickle._
 import scala.annotation.Annotation
 
 // A trivial little system of annotation/controller/router/Client

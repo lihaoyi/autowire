@@ -106,7 +106,7 @@ object Macros {
                 (c: Context)
                 (f: c.Expr[scala.Singleton]*)
                 : c.Expr[RouteType] = {
-    println("-----------------------------------------------------")
+//    println("-----------------------------------------------------")
 
     import c.universe._
     val routes: Seq[Tree] = for{
