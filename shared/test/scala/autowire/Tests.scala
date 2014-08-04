@@ -40,8 +40,7 @@ object Client extends autowire.Client[Rpc]{
 }
 
 object Tests extends TestSuite{
-
-  def await[T](f: Future[T]) = Await.result(f, 10 seconds)
+  import utest.PlatformShims.await
 
   val tests = TestSuite{
     'basicCalls{
@@ -71,15 +70,13 @@ object Tests extends TestSuite{
 //    }
     'compilationFailures{
       'notWebFails{
-        import shapeless.test.illTyped
-        illTyped { """Client[Api](x => Controller.subtract(1, 2))""" }
-        illTyped { """Client[FakeApi](_.omg(1))""" }
+        compileError { """Client[Api](x => Controller.subtract(1, 2))""" }
+        compileError { """Client[FakeApi](_.omg(1))""" }
       }
       'notSimpleCallFails{
-        import shapeless.test.illTyped
-        illTyped { """Client[Api](x => 1 + 1 + "")""" }
-        illTyped { """Client[Api](x => 1)""" }
-        illTyped { """Client[Api](x => Thread.sleep(lols))""" }
+        compileError { """Client[Api](x => 1 + 1 + "")""" }
+        compileError { """Client[Api](x => 1)""" }
+        compileError { """Client[Api](x => Thread.sleep(lols))""" }
       }
     }
     'runtimeFailures{

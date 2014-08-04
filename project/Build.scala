@@ -5,9 +5,6 @@ import scala.scalajs.sbtplugin.ScalaJSPlugin._
 import scala.scalajs.sbtplugin.ScalaJSPlugin.ScalaJSKeys._
 
 object Build extends sbt.Build{
-  def qq(v: String) =
-    if (v startsWith "2.11.") Nil
-    else Seq("org.scalamacros" %% s"quasiquotes" % "2.0.0")
   val cross = new utest.jsrunner.JsCrossBuild(
     organization := "com.lihaoyi",
 
@@ -15,10 +12,14 @@ object Build extends sbt.Build{
     name := "autowire",
     scalaVersion := "2.11.1",
     libraryDependencies ++= Seq(
-      compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
       "org.scala-lang" % "scala-reflect" % scalaVersion.value
-
-    ) ++ qq(scalaVersion.value),
+    ) ++ (
+      if (scalaVersion.value startsWith "2.11.") Nil
+      else Seq(
+        compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
+        "org.scalamacros" %% s"quasiquotes" % "2.0.0"
+      )
+    ),
     // Sonatype
     publishArtifact in Test := false,
     publishTo <<= version { (v: String) =>
@@ -60,7 +61,6 @@ object Build extends sbt.Build{
 
   lazy val jvm = cross.jvm.settings(
     libraryDependencies ++= Seq(
-      "com.chuusai" %% "shapeless" % "2.0.0" % "test",
       "com.lihaoyi" %% "upickle" % "0.2.0"
     )
   )
