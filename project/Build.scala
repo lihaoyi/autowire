@@ -8,9 +8,9 @@ object Build extends sbt.Build{
   val cross = new utest.jsrunner.JsCrossBuild(
     organization := "com.lihaoyi",
 
-    version := "0.1.2",
+    version := "0.1.3",
     name := "autowire",
-    scalaVersion := "2.11.1",
+    scalaVersion := "2.11.2",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value
     ) ++ (
@@ -22,9 +22,7 @@ object Build extends sbt.Build{
     ),
     // Sonatype
     publishArtifact in Test := false,
-    publishTo <<= version { (v: String) =>
-      Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2")
-    },
+    publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
 
     pomExtra :=
       <url>https://github.com/lihaoyi/ajax</url>
@@ -54,14 +52,13 @@ object Build extends sbt.Build{
       "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
     ),
     libraryDependencies ++= Seq(
-      "name.myltsev" %%% "parboiled" % "2.0.0" % "test",
-      "com.lihaoyi" %%% "upickle" % "0.2.0"
+      "com.lihaoyi" %%% "upickle" % "0.2.1"
     )
   )
 
   lazy val jvm = cross.jvm.settings(
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % "0.2.0"
+      "com.lihaoyi" %% "upickle" % "0.2.1"
     )
   )
 }

@@ -39,6 +39,7 @@ object Macros {
                (reader: c.Expr[upickle.Reader[R]])
                : c.Expr[Future[R]] = {
     import c.universe._
+
     val markerType = c.prefix.actualType.widen.typeArgs(1)
 
     // If the tree is one of those default-argument containing blocks or

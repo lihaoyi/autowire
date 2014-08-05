@@ -1,4 +1,4 @@
-Autowire 0.1.2
+Autowire 0.1.3
 ==============
 
 Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
@@ -191,9 +191,9 @@ Maven Artifacts
 Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS respectively:
 
 ```scala
-"com.lihaoyi" %% "autowire" % "0.1.2"
-"com.lihaoyi" %%% "autowire" % "0.1.2"
+"com.lihaoyi" %% "autowire" % "0.1.3"
+"com.lihaoyi" %%% "autowire" % "0.1.3"
 ```
 
-It's only available for Scala 2.11.x
+It's only available for Scala 2.11.x and Scala.js 0.5.3+
 

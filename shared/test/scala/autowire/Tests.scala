@@ -41,7 +41,7 @@ object Client extends autowire.Client[Rpc]{
 
 object Tests extends TestSuite{
   import utest.PlatformShims.await
-
+  println(utest.*)
   val tests = TestSuite{
     'basicCalls{
 
@@ -70,13 +70,13 @@ object Tests extends TestSuite{
 //    }
     'compilationFailures{
       'notWebFails{
-        compileError { """Client[Api](x => Controller.subtract(1, 2))""" }
-        compileError { """Client[FakeApi](_.omg(1))""" }
+        * - compileError { """Client[Api](x => Controller.subtract(1, 2))""" }
+        * - compileError { """Client[FakeApi](_.omg(1))""" }
       }
       'notSimpleCallFails{
-        compileError { """Client[Api](x => 1 + 1 + "")""" }
-        compileError { """Client[Api](x => 1)""" }
-        compileError { """Client[Api](x => Thread.sleep(lols))""" }
+        * - compileError { """Client[Api](x => 1 + 1 + "")""" }
+        * - compileError { """Client[Api](x => 1)""" }
+        * - compileError { """Client[Api](x => Thread.sleep(lols))""" }
       }
     }
     'runtimeFailures{
