@@ -6,12 +6,7 @@ import utest.ExecutionContext.RunNow
 import upickle._
 import scala.annotation.Annotation
 
-// A trivial little system of annotation/controller/router/Client
-// that can be used to test out the serialization/deserialization
-// properties of autowire, but with everything running locally.
-class Rpc extends Annotation
 
-@Rpc
 trait Api{
   def multiply(x: Double, ys: Seq[Double]): String
   def add(x: Int, y: Int = 1 + 1, z: Int = 10): String
@@ -29,8 +24,8 @@ object Controller extends Api{
   def subtract(x: Int, y: Int = 1 + 1): String = s"$x-$y"
 }
 
-object Client extends autowire.Client[Rpc]{
-  val router = Macros.route[Rpc](Controller)
+object Client extends autowire.Client[Api]{
+  val router = Macros.route[Api](Controller)
   case class NoSuchRoute(msg: String) extends Exception(msg)
 
   def callRequest(r: Request) = {
@@ -45,11 +40,11 @@ object Tests extends TestSuite{
   val tests = TestSuite{
     'basicCalls{
 
-      val res1 = await(Client[Api](_.add(1, 2, 3)))
-      val res2 = await(Client[Api](_.add(1)))
-      val res3 = await(Client[Api](_.add(1, 2)))
-      val res4 = await(Client[Api](_.multiply(x = 1.2, Seq(2.3))))
-      val res5 = await(Client[Api](_.multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4))))
+      val res1 = await(Client(_.add(1, 2, 3)))
+      val res2 = await(Client(_.add(1)))
+      val res3 = await(Client(_.add(1, 2)))
+      val res4 = await(Client(_.multiply(x = 1.2, Seq(2.3))))
+      val res5 = await(Client(_.multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4))))
 
       assert(
         res1 == "1+2+3",
@@ -60,23 +55,20 @@ object Tests extends TestSuite{
       )
     }
     'aliased{
-      val api = Client[Api]
+      val api = Client
       val res = await(api(_.add(1, 2, 4)))
       assert(res == "1+2+4")
     }
-//    'async{
-//      val res5 = await(Client[Api](_.sloww(Seq("omgomg", "wtf"))))
+    'async{
+//      val res5 = await(Client(_.sloww(Seq("omgomg", "wtf"))))
 //      assert(res5 == Seq(6, 3))
-//    }
+    }
     'compilationFailures{
-      'notWebFails{
-        * - compileError { """Client[Api](x => Controller.subtract(1, 2))""" }
-        * - compileError { """Client[FakeApi](_.omg(1))""" }
-      }
       'notSimpleCallFails{
-        * - compileError { """Client[Api](x => 1 + 1 + "")""" }
-        * - compileError { """Client[Api](x => 1)""" }
-        * - compileError { """Client[Api](x => Thread.sleep(lols))""" }
+//        await(Client(x => 1 + "omg" + 1 + ""))
+//        * - compileError { """Client(x => 1 + 1 + "")""" }
+//        * - compileError { """Client(x => 1)""" }
+//        * - compileError { """Client(x => Thread.sleep(lols))""" }
       }
     }
     'runtimeFailures{

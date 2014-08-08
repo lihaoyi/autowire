@@ -40,7 +40,10 @@ object Macros {
                : c.Expr[Future[R]] = {
     import c.universe._
 
-    val markerType = c.prefix.actualType.widen.typeArgs(1)
+    val clientType = typeOf[autowire.Client[_]].typeSymbol.asClass
+    val typeParamType = clientType.typeParams(0).asType.toType
+    val concreteType = c.prefix.actualType
+    val markerType = typeParamType.asSeenFrom(concreteType, clientType)
 
     // If the tree is one of those default-argument containing blocks or
     // functions, pry it apart such that the main logic can operate on the
@@ -60,16 +63,11 @@ object Macros {
         (last, deadStmts.map(_.name).toSet,(t: Tree) => q"..$liveStmts; $t")
       case x => (x, Set.empty, (y: Tree) => y)
     }
-
     val check = for{
       t @ q"$src2.$method(..$args)" <- Win(inner,
         "Invalid contents: contents of `Handler.apply` must be a single " +
         s"function call to a method on a top-level object marked with @$markerType"
       )
-      true <- Win(src2.tpe.typeSymbol.annotations.exists(_.tree.tpe =:= markerType),
-        s"You can only make calls to traits marked as @$markerType"
-      )
-
       path = src2
         .tpe
         .widen
@@ -114,22 +112,14 @@ object Macros {
       singleton <- f
       tree = singleton.tree
       t = singleton.tree.symbol.asInstanceOf[ModuleSymbol]
-      apiClass = singleton
-        .tree
-        .symbol
-        .asModule
-        .moduleClass
-        .asClass
-        .baseClasses
-        .find(_.annotations.exists(_.tree.tpe =:= weakTypeOf[A]))
-        .get
-      member <- apiClass.typeSignature.members
+      apiClass = weakTypeOf[A]
+      member <- apiClass.members
       // not some rubbish defined on AnyRef
       if !weakTypeOf[AnyRef].members.exists(_.name == member.name)
       // Not a default value synthetic methods
       if !member.isSynthetic
     } yield {
-      val path = apiClass.fullName.toString.split('.').toSeq :+ member.name.toString
+      val path = apiClass.typeSymbol.fullName.toString.split('.').toSeq :+ member.name.toString
 
       val args = member
         .typeSignature
