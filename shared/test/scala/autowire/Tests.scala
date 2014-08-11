@@ -64,10 +64,10 @@ object Tests extends TestSuite{
       val res = await(api(_.add(1, 2, 4)))
       assert(res == "1+2+4")
     }
-//    'async{
-//      val res5 = await(Client[Api](_.sloww(Seq("omgomg", "wtf"))))
-//      assert(res5 == Seq(6, 3))
-//    }
+    'async{
+      val res5 = await(Client[Api].async(_.sloww(Seq("omgomg", "wtf"))))
+      assert(res5 == Seq(6, 3))
+    }
     'compilationFailures{
       'notWebFails{
         * - compileError { """Client[Api](x => Controller.subtract(1, 2))""" }

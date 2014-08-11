@@ -18,6 +18,7 @@ package object autowire {
 
   class ClientProxy[T, A](h: Client[A]){
     def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
+    def async[R: upickle.Reader](f: T => Future[R]): Future[R] = macro Macros.ajaxMacro[R]
     def callRequest(req: Request): Future[String] = h.callRequest(req)
   }
 
