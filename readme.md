@@ -185,7 +185,7 @@ Autowire naturally has some limitations, some fundamental, and some not:
 - It's performance characteristics are unknown.
 - It's still a version 0.1.0 and likely to change in the near future. 
 
-Maven Artifacts
+Getting Started
 ===============
 
 Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS respectively:
@@ -196,4 +196,9 @@ Autowire is available at the following maven coordinates, for Scala-JVM and Scal
 ```
 
 It's only available for Scala 2.11.x and Scala.js 0.5.3+
+
+To see a simple example involving a ScalaJS client and Spray server, check out this example:
+
+https://github.com/lihaoyi/workbench-example-app/tree/autowire
+
 
