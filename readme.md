@@ -5,23 +5,20 @@ Autowire is a pair of macros that allows you to perform type-safe, reflection-fr
 
 
 ```scala    
-Client[Api](_.add(1, 2, 3): T): Future[T]
-//          |     |             |
-//          |     |             The T is pickled and wrapped in a Future[T]
-//          |     The arguments to that method are pickled automatically
-//          Call a method on the `Api` trait
+Client: autowire.Client[Api]
+Client(_.add(1, 2, 3): T): Future[T]
+//       |     |             |
+//       |     |             The T is pickled and wrapped in a Future[T]
+//       |     The arguments to that method are pickled automatically
+//       Call a method on the `Api` trait
 ```
 
 To do this, it provides two macros: one for the client to make these type-safe calls which are then marshalled into RPCs
 
 ```scala
-abstract class Client[R]{
-  def apply[T]: ClientProxy[T, R] = new ClientProxy(this)
+abstract class Client[T]{
+  def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
   def callRequest(req: Request): Future[String]
-}
-
-class ClientProxy[T, A](h: Client[A]){
-  def apply[R: upickle.Reader](f: T => R): Future[R]
 }
 ```
 
@@ -37,7 +34,7 @@ With the `Request` data structure being defined as
 case class Request(path: Seq[String], args: Map[String, String])
 ```
 
-This allows you to safely wire up disparate endpoints across the internet, taking care of all the serialization for you using [uPickle](https://github.com/lihaoyi/upickle), while still giving your full control of piping the data across some underlying transport (Ajax, tcp, etc.). As long as you are able to transmit the `Request` from the client and can provide a `Request` to `route`'s partial function, Autowire doesn't care how you do it.
+This allows you to safely wire up disparate endpoints across the internet, taking care of all the serialization for you using [uPickle](https://github.com/lihaoyi/upickle). Nevertheless, autowire still gives you full control of piping the data across some underlying transport (Ajax, tcp, etc.) by overriding the `callRequest` method, or deciding how to handle the data on the server before handing over to the `route`. As long as you are able to transmit the `Request` from the client and can provide a `Request` to `route`'s partial function, Autowire doesn't care how you do it.
 
 Minimal Example
 ===============
@@ -45,11 +42,6 @@ Minimal Example
 A minimal example of how Autowire works can be found in the unit tests:
 
 ```scala
-// Annotation used to mark all traits belonging to a particular "kind" of RPC
-class Rpc extends Annotation
-
-// The RPC public interface
-@Rpc
 trait Api{
   def multiply(x: Double, ys: Seq[Double]): String
 }
@@ -60,10 +52,10 @@ object Controller extends Api{
 }
 
 // RPC Client which talks to any interface of kind `RPC` 
-object Client extends autowire.Client[Rpc]{
+object Client extends autowire.Client[Api]{
 
   // Auto-generates the routes to the various methods of `Controller`
-  val router = Macros.route[Rpc](Controller)
+  val router = Macros.route[Api](Controller)
 
   // Delegate the `Request` object directly; in other 
   // circumstances this could go over the network or Ajax  
@@ -74,10 +66,10 @@ object Client extends autowire.Client[Rpc]{
 This defines and wires up everything. The `route` macro takes a list of objects which implement some trait annotated with (in this case) `Rpc`, and statically generates a set of routes that route incoming `Request` objects to the functions exposed by the `Rpc`-annotated traits. After that, you can make RPC calls via
 
 ```scala
-println(await(Client[Api](_.add(1, 2, 3)))) // "1+2+3"
+println(await(Client(_.add(1, 2, 3)))) // "1+2+3"
 ```
 
-Where the `Client[Api](_.add(1, 2, 3))` is a macro that expands to the code necessary to generate a `Request` object in the first place and hands it to the `Client.callRequest` method.
+Where the `Client(_.add(1, 2, 3))` is a macro that expands to the code necessary to generate a `Request` object in the first place and hands it to the `Client.callRequest` method.
 
 In this case, `callRequest` just hands the `Request` directly to the `route` function, but you could easily do the same thing but passing the `Request` object over an Ajax call, TCP, Websockets, etc. as long as you have some way of getting the `Request` object from `callRequest` to the `route` function at the other end.
 
@@ -87,7 +79,7 @@ Usage With ScalaJS
 The fact that Autowire works perfectly fine across both Scala-JVM and Scala-JS makes it ideal for wiring up your web-server and client code for making type-safe, statically-checked Ajax requests. For example, [Scala-Js-Fiddle](http://www.scala-js-fiddle.com) uses it extensively for client-server calls. To do this, we have essentially the same code as above, except that instead of `callRequest` being a direct call to the `router`, we need to instead shuttle the data over HTTP:
  
 ```scala
-object Post extends autowire.Client[Web]{
+object Post extends autowire.Client[Api]{
   override def callRequest(req: Request): Future[String] = {
     val url = "/api/" + req.path.mkString("/")
     logln("Calling " + url)
@@ -106,7 +98,7 @@ post {
   path("api" / Segments){ s =>
     extract(_.request.entity.asString) { e =>
       complete {
-        autowire.Macros.route[Web](Server)(
+        autowire.Macros.route[Api](Server)(
           autowire.Request(s, upickle.read[Map[String, String]](e))
         )
       }
@@ -118,9 +110,6 @@ post {
 In this case, the public API of the web server is defined in the `shared/` project so as to be available to both the client and server code:
  
 ```scala
-class Web extends ClassfileAnnotation
-
-@Web
 trait Api{
   def compile(txt: String): (String, Option[String])
   def fastOpt(txt: String): (String, Option[String])
@@ -134,7 +123,7 @@ trait Api{
 The server code implements these methods on the `Server` object, with the routes generated as shown above, and the client code can then use the `Post` object to directly "call" methods on the `Api` trait:
   
 ```scala
-Post[Api](_.fullOpt(editor.code))  
+Post(_.fullOpt(editor.code))  
 ```
 
 Why Autowire
@@ -152,11 +141,11 @@ Autowire aims to solve all these problems:
 - Ajax calls using Autowire are statically checked just like the rest of your program. For example, typos are immediately spotted by the compiler:
 
 ```scala
-Post[Api](_.fastOp(editor.code))
+Post(_.fastOp(editor.code))
 
 [error] /Client.scala:104: value fastOp is not a member of fiddle.Api
-[error]     Post[Api](_.fastOp(editor.code))
-[error]                 ^
+[error]     Post(_.fastOp(editor.code))
+[error]            ^
 ```
 
 - Similarly, since Autowire RPC calls are (at least superficially) just method calls, things like "find usages", IDE-renaming, and other such tools all work flawlessly across these calls.
@@ -169,7 +158,7 @@ def completeStuff(txt: String, flag: String, offset: Int): List[(String, String)
 
 // somewhere else inside an `async` block
 val res: List[(String, String)] = {
-  await(Post[Api](_.completeStuff(code, flag, intOffset)))
+  await(Post(_.completeStuff(code, flag, intOffset)))
 }
 ```
 
