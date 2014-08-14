@@ -149,7 +149,7 @@ object Macros {
         """
       frag
     }
-    val res = q"{case ..$routes}: autowire.RouteType"
+    val res = q"{case ..$routes}: autowire.Router"
     c.Expr[Router](res)
   }
 }
