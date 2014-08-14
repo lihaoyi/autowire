@@ -17,7 +17,7 @@ package object autowire {
   case class Request(path: Seq[String], args: Map[String, String])
 
   abstract class Client[T]{
-    def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
+    def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.clientMacro[R]
     def callRequest(req: Request): Future[String]
   }
 }

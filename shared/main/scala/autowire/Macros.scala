@@ -6,24 +6,26 @@ import language.experimental.macros
 import scala.annotation.Annotation
 import scala.collection.mutable
 
-sealed trait Check[T] {
-  def map[V](f: T => V): Check[V]
-  def flatMap[V](f: T => Check[V]): Check[V]
-  def withFilter(f: T => Boolean): Check[T]
-}
-case class Luz[T](s: String) extends Check[T]{
-  def map[V](f: T => V) = Luz[V](s)
-  def flatMap[V](f: T => Check[V]) = Luz[V](s)
-  def withFilter(f: T => Boolean) = Luz[T](s)
-}
 
-case class Win[T](t: T, s: String) extends Check[T]{
-  def map[V](f: T => V) = Win(f(t), s)
-  def flatMap[V](f: T => Check[V]) = f(t)
-  def withFilter(f: T => Boolean) = if (f(t)) this else Luz(s)
-}
 
 object Macros {
+
+  sealed trait Check[T] {
+    def map[V](f: T => V): Check[V]
+    def flatMap[V](f: T => Check[V]): Check[V]
+    def withFilter(f: T => Boolean): Check[T]
+  }
+  case class Luz[T](s: String) extends Check[T]{
+    def map[V](f: T => V) = Luz[V](s)
+    def flatMap[V](f: T => Check[V]) = Luz[V](s)
+    def withFilter(f: T => Boolean) = Luz[T](s)
+  }
+
+  case class Win[T](t: T, s: String) extends Check[T]{
+    def map[V](f: T => V) = Win(f(t), s)
+    def flatMap[V](f: T => Check[V]) = f(t)
+    def withFilter(f: T => Boolean) = if (f(t)) this else Luz(s)
+  }
 
   def futurize(c: Context)(t: c.Tree, member: c.Symbol) = {
     import c.universe._
@@ -33,13 +35,13 @@ object Macros {
       q"scala.concurrent.Future.successful($t)"
     }
   }
-  def ajaxMacro[R: c.WeakTypeTag]
-               (c: Context)
-               (f: c.Expr[R])
-               (reader: c.Expr[upickle.Reader[R]])
-               : c.Expr[Future[R]] = {
+  def clientMacro[R: c.WeakTypeTag]
+                 (c: Context)
+                 (f: c.Expr[R])
+                 (reader: c.Expr[upickle.Reader[R]])
+                 : c.Expr[Future[R]] = {
     import c.universe._
-
+    println("clientMacro")
     val clientType = typeOf[autowire.Client[_]].typeSymbol.asClass
     val typeParamType = clientType.typeParams(0).asType.toType
     val concreteType = c.prefix.actualType
@@ -100,20 +102,21 @@ object Macros {
       case Luz(s) => c.abort(c.enclosingPosition, s)
     }
   }
-  def route[A](f: scala.Singleton*): RouteType = macro routeMacro[A]
+
+  def route[A](f: A): RouteType = macro routeMacro[A]
   def routeMacro[A: c.WeakTypeTag]
                 (c: Context)
-                (f: c.Expr[scala.Singleton]*)
+                (f: c.Expr[A])
                 : c.Expr[RouteType] = {
 //    println("-----------------------------------------------------")
 
     import c.universe._
+    val singleton = f
+    val tree = singleton.tree
+    val t = singleton.tree.symbol.asInstanceOf[ModuleSymbol]
+    val apiClass = weakTypeOf[A]
     val routes: Seq[Tree] = for{
-      singleton <- f
-      tree = singleton.tree
-      t = singleton.tree.symbol.asInstanceOf[ModuleSymbol]
-      apiClass = weakTypeOf[A]
-      member <- apiClass.members
+      member <- apiClass.members.toSeq
       // not some rubbish defined on AnyRef
       if !weakTypeOf[AnyRef].members.exists(_.name == member.name)
       // Not a default value synthetic methods
