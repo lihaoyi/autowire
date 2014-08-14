@@ -38,80 +38,80 @@ object Tests extends TestSuite{
   import utest.PlatformShims.await
   println(utest.*)
   val tests = TestSuite{
-//    'basicCalls{
-//
-//      val res1 = await(Client(_.add(1, 2, 3)))
-//      val res2 = await(Client(_.add(1)))
-//      val res3 = await(Client(_.add(1, 2)))
-//      val res4 = await(Client(_.multiply(x = 1.2, Seq(2.3))))
-//      val res5 = await(Client(_.multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4))))
-//
-//      assert(
-//        res1 == "1+2+3",
-//        res2 == "1+2+10",
-//        res3 == "1+2+10",
-//        res4 == "1.2*2.3",
-//        res5 == "1.1*2.2*3.3*4.4"
-//      )
-//    }
-//    'aliased{
-//      val api = Client
-//      val res = await(api(_.add(1, 2, 4)))
-//      assert(res == "1+2+4")
-//    }
+    'basicCalls{
+
+      val res1 = await(Client(_.add(1, 2, 3)))
+      val res2 = await(Client(_.add(1)))
+      val res3 = await(Client(_.add(1, 2)))
+      val res4 = await(Client(_.multiply(x = 1.2, Seq(2.3))))
+      val res5 = await(Client(_.multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4))))
+
+      assert(
+        res1 == "1+2+3",
+        res2 == "1+2+10",
+        res3 == "1+2+10",
+        res4 == "1.2*2.3",
+        res5 == "1.1*2.2*3.3*4.4"
+      )
+    }
+    'aliased{
+      val api = Client
+      val res = await(api(_.add(1, 2, 4)))
+      assert(res == "1+2+4")
+    }
     'async{
       val res5 = await(Client(_.sloww(Seq("omgomg", "wtf"))))
       assert(res5 == Seq(6, 3))
     }
-//    'compilationFailures{
-//      'notSimpleCallFails{
-////        await(Client(x => 1 + "omg" + 1 + ""))
-////        * - compileError { """Client(x => 1 + 1 + "")""" }
-////        * - compileError { """Client(x => 1)""" }
-////        * - compileError { """Client(x => Thread.sleep(lols))""" }
-//      }
-//    }
-//    'runtimeFailures{
-//      'noSuchRoute{
-//        val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
-//        assert(!Client.router.isDefinedAt(badRequest))
-//        intercept[MatchError] {
-//          Client.router(badRequest)
-//        }
-//      }
-//      'inputError{
-//        'keysMissing {
-//          val badRequest = Request(Seq("autowire", "Api", "multiply"), Map.empty)
-//          assert(Client.router.isDefinedAt(badRequest))
-//          intercept[InputError] {
-//            Client.router(badRequest)
-//          }
-//        }
-//        'keysInvalid{
-//          val badRequest = Request(
-//            Seq("autowire", "Api", "multiply"),
-//            Map("x" -> "[]", "ys" -> "[1, 2]")
-//          )
-//          assert(Client.router.isDefinedAt(badRequest))
-//          val InputError(
-//            upickle.Invalid.Data(upickle.Js.Arr(), "Number")
-//          ) = intercept[InputError] {
-//            Client.router(badRequest)
-//          }
-//        }
-//        'invalidJson{
-//          val badRequest = Request(
-//            Seq("autowire", "Api", "multiply"),
-//            Map("x" -> "[", "ys" -> "[1, 2]")
-//          )
-//          assert(Client.router.isDefinedAt(badRequest))
-//          val InputError(
-//            upickle.Invalid.Json(_, _)
-//          ) = intercept[InputError] {
-//            Client.router(badRequest)
-//          }
-//        }
-//      }
-//    }
+    'compilationFailures{
+      'notSimpleCallFails{
+//        await(Client(x => 1 + "omg" + 1 + ""))
+//        * - compileError { """Client(x => 1 + 1 + "")""" }
+//        * - compileError { """Client(x => 1)""" }
+//        * - compileError { """Client(x => Thread.sleep(lols))""" }
+      }
+    }
+    'runtimeFailures{
+      'noSuchRoute{
+        val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
+        assert(!Client.router.isDefinedAt(badRequest))
+        intercept[MatchError] {
+          Client.router(badRequest)
+        }
+      }
+      'inputError{
+        'keysMissing {
+          val badRequest = Request(Seq("autowire", "Api", "multiply"), Map.empty)
+          assert(Client.router.isDefinedAt(badRequest))
+          intercept[InputError] {
+            Client.router(badRequest)
+          }
+        }
+        'keysInvalid{
+          val badRequest = Request(
+            Seq("autowire", "Api", "multiply"),
+            Map("x" -> "[]", "ys" -> "[1, 2]")
+          )
+          assert(Client.router.isDefinedAt(badRequest))
+          val InputError(
+            upickle.Invalid.Data(upickle.Js.Arr(), "Number")
+          ) = intercept[InputError] {
+            Client.router(badRequest)
+          }
+        }
+        'invalidJson{
+          val badRequest = Request(
+            Seq("autowire", "Api", "multiply"),
+            Map("x" -> "[", "ys" -> "[1, 2]")
+          )
+          assert(Client.router.isDefinedAt(badRequest))
+          val InputError(
+            upickle.Invalid.Json(_, _)
+          ) = intercept[InputError] {
+            Client.router(badRequest)
+          }
+        }
+      }
+    }
   }
 }

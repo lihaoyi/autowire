@@ -35,13 +35,14 @@ object Macros {
       q"scala.concurrent.Future.successful($t)"
     }
   }
-  def clientMacro[R: c.WeakTypeTag]
+  def clientMacro[R, W]
                  (c: Context)
                  (f: c.Expr[R])
-                 (reader: c.Expr[upickle.Reader[R]])
+                 (wrapper: c.Expr[Wrapper[W, R]])
+                 (implicit r: c.WeakTypeTag[R], w: c.WeakTypeTag[W])
                  : c.Expr[Future[R]] = {
     import c.universe._
-    println("clientMacro")
+
     val clientType = typeOf[autowire.Client[_]].typeSymbol.asClass
     val typeParamType = clientType.typeParams(0).asType.toType
     val concreteType = c.prefix.actualType
@@ -93,7 +94,7 @@ object Macros {
       wrap(q"""(
         ${c.prefix}.callRequest(
           autowire.Request(Seq(..$path), Map(..$pickled))
-        ).map(upickle.read(_)($reader))
+        ).map(upickle.read(_)(${wrapper}.r))
       )""")
     }
 
