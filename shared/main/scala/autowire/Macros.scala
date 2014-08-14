@@ -38,7 +38,7 @@ object Macros {
   def clientMacro[R, W]
                  (c: Context)
                  (f: c.Expr[R])
-                 (wrapper: c.Expr[Wrapper[W, R]])
+                 (wrapper: c.Expr[Internal.Wrapper[W, R]])
                  (implicit r: c.WeakTypeTag[R], w: c.WeakTypeTag[W])
                  : c.Expr[Future[R]] = {
     import c.universe._
@@ -104,11 +104,11 @@ object Macros {
     }
   }
 
-  def route[A](f: A): RouteType = macro routeMacro[A]
+  def route[A](f: A): Router = macro routeMacro[A]
   def routeMacro[A: c.WeakTypeTag]
                 (c: Context)
                 (f: c.Expr[A])
-                : c.Expr[RouteType] = {
+                : c.Expr[Router] = {
 //    println("-----------------------------------------------------")
 
     import c.universe._
@@ -133,7 +133,7 @@ object Macros {
         .map{ case (arg, i) =>
           val defaultName = s"${member.name}$$default$$${i+1}"
           def get(t: Tree) = q"""
-            args.get(${arg.name.toString}).fold($t)(x => autowire.wrapInvalid(upickle.read[${arg.typeSignature}](x)))
+            args.get(${arg.name.toString}).fold($t)(x => autowire.Internal.wrapInvalid(upickle.read[${arg.typeSignature}](x)))
           """
           if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
             get(q"$singleton.${TermName(defaultName)}")
@@ -150,7 +150,7 @@ object Macros {
       frag
     }
     val res = q"{case ..$routes}: autowire.RouteType"
-    c.Expr[RouteType](res)
+    c.Expr[Router](res)
   }
 }
 
