@@ -35,15 +35,15 @@ object Macros {
       q"scala.concurrent.Future.successful($t)"
     }
   }
-  def clientMacro[R, W]
+  def clientMacro[R, W, Reader[_]]
                  (c: Context)
                  (f: c.Expr[R])
-                 (wrapper: c.Expr[Internal.Wrapper[W, R]])
+                 (wrapper: c.Expr[Internal.Wrapper[W, R, Reader]])
                  (implicit r: c.WeakTypeTag[R], w: c.WeakTypeTag[W])
                  : c.Expr[Future[R]] = {
     import c.universe._
 
-    val clientType = typeOf[autowire.Client[_]].typeSymbol.asClass
+    val clientType = typeOf[autowire.Client[_, _, _]].typeSymbol.asClass
     val typeParamType = clientType.typeParams(0).asType.toType
     val concreteType = c.prefix.actualType
     val markerType = typeParamType.asSeenFrom(concreteType, clientType)
@@ -86,7 +86,7 @@ object Macros {
           case (q"$thing.$name", _) if name.toString.contains("$default$") => false
           case _ => true
         }
-        .map{case (t, param: Symbol) => q"${param.name.toString} -> upickle.write($t)"}
+        .map{case (t, param: Symbol) => q"${param.name.toString} -> ${c.prefix}.write($t)"}
 
 
     } yield {
@@ -94,7 +94,7 @@ object Macros {
       wrap(q"""(
         ${c.prefix}.callRequest(
           autowire.Request(Seq(..$path), Map(..$pickled))
-        ).map(upickle.read(_)(${wrapper}.r))
+        ).map(${c.prefix}.read(_)(${wrapper}.r))
       )""")
     }
 
@@ -133,7 +133,7 @@ object Macros {
         .map{ case (arg, i) =>
           val defaultName = s"${member.name}$$default$$${i+1}"
           def get(t: Tree) = q"""
-            args.get(${arg.name.toString}).fold($t)(x => autowire.Internal.wrapInvalid(upickle.read[${arg.typeSignature}](x)))
+            args.get(${arg.name.toString}).fold($t)(x => try upickle.read[${arg.typeSignature}](x) catch autowire.Internal.invalidHandler)
           """
           if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
             get(q"$singleton.${TermName(defaultName)}")

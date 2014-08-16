@@ -3,20 +3,16 @@ import scala.concurrent.Future
 import language.experimental.macros
 
 package object autowire {
-  case class InputError(ex: Exception) extends Exception
+  case class InputError(ex: Throwable) extends Exception
 
   object Internal{
-    def wrapInvalid[T](f: => T): T = {
-      try { f }
-      catch {
-        case e: upickle.Invalid.Data => throw InputError(e)
-        case e: upickle.Invalid.Json => throw InputError(e)
-      }
+    val invalidHandler: PartialFunction[Throwable, Nothing] = {
+      case e => throw InputError(e)
     }
-    class Wrapper[W, R](implicit val r: upickle.Reader[R])
+    class Wrapper[Wrapped, Result, Reader[_]](implicit val r: Reader[Result])
     object Wrapper {
-      implicit def future[T: upickle.Reader] = new Wrapper[Future[T], T]
-      implicit def normal[T: upickle.Reader] = new Wrapper[T, T]
+      implicit def future[Result: Reader, Reader[_]] = new Wrapper[Future[Result], Result, Reader]
+      implicit def normal[Result: Reader, Reader[_]] = new Wrapper[Result, Result, Reader]
     }
   }
 
@@ -57,13 +53,17 @@ package object autowire {
    * @tparam T The interface that this autowire client makes its requests 
    *           against.
    */
-  abstract class Client[T]{
+  abstract class Client[Trait, Reader[_], Writer[_]]{
     /**
      * Actually makes a request
      */
-    def apply[R, W]
-             (f: T => W)
-             (implicit wrapper: Internal.Wrapper[W, R]): Future[R] = macro Macros.clientMacro[R, W]
+    def apply[Result, Wrapped]
+             (f: Trait => Wrapped)
+             (implicit wrapper: Internal.Wrapper[Wrapped, Result, Reader]): Future[Result] = macro Macros.clientMacro[Result, Wrapped, Reader]
+
+
+    def read[V: Reader](s: String): V
+    def write[V: Writer](v: V): String
 
     /**
      * A method for you to override, that actually performs the heavy 

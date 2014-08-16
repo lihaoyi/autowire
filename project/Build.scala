@@ -52,13 +52,13 @@ object Build extends sbt.Build{
       "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
     ),
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "upickle" % "0.2.2"
+      "com.lihaoyi" %%% "upickle" % "0.2.2" % "test"
     )
   )
 
   lazy val jvm = cross.jvm.settings(
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % "0.2.2"
+      "com.lihaoyi" %% "upickle" % "0.2.2" % "test"
     )
   )
 }

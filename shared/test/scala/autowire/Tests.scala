@@ -24,10 +24,11 @@ object Controller extends Api{
   def subtract(x: Int, y: Int = 1 + 1): String = s"$x-$y"
 }
 
-object Client extends autowire.Client[Api]{
+object Client extends autowire.Client[Api, upickle.Reader, upickle.Writer]{
   val router = Macros.route[Api](Controller)
   case class NoSuchRoute(msg: String) extends Exception(msg)
-
+  def write[T: upickle.Writer](t: T) = upickle.write(t)
+  def read[T: upickle.Reader](s: String) = upickle.read[T](s)
   def callRequest(r: Request) = {
     router.lift(r)
           .getOrElse(Future.failed(new NoSuchRoute("nope!")))
