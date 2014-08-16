@@ -43,27 +43,33 @@ package object autowire {
    *             simply re-constituted by the receiver.
    */
   case class Request(path: Seq[String], args: Map[String, String])
+  implicit class Callable[T](t: T){
+    def call() = macro Macros.clientMacro[T]
+  }
+  case class ClientProxy[Trait, Reader[_], Writer[_]](self: Client[Reader, Writer])
 
+  @compileTimeOnly("unwrapClientProxy should not exist at runtime!")
+  implicit def unwrapClientProxy[Trait, Reader[_], Writer[_]](w: ClientProxy[Trait, Reader, Writer]): Trait = ???
   /**
    * A client to make autowire'd function calls to a particular interface. 
    * A single client can only make calls to one interface, but it's not a 
    * huge deal. Just make a few clients (they can all inherit/delegate the 
    * `callRequest` method) if you want multiple targets.
    * 
-   * @tparam T The interface that this autowire client makes its requests 
-   *           against.
+   * @tparam Trait The interface that this autowire client makes its requests
+   *               against.
+   * @tparam Reader An implicit typeclass needed to de-serialize values
+   * @tparam Writer An implicit typeclass needed to serialize values
    */
-  abstract class Client[Trait, Reader[_], Writer[_]]{
+  trait Client[Reader[_], Writer[_]]{
     /**
      * Actually makes a request
      */
-    def apply[Result, Wrapped]
-             (f: Trait => Wrapped)
-             (implicit wrapper: Internal.Wrapper[Wrapped, Result, Reader]): Future[Result] = macro Macros.clientMacro[Result, Wrapped, Reader]
+    def apply[Trait]: ClientProxy[Trait, Reader, Writer] = ClientProxy(this)
 
 
-    def read[V: Reader](s: String): V
-    def write[V: Writer](v: V): String
+    def read[Result: Reader](s: String): Result
+    def write[Result: Writer](v: Result): String
 
     /**
      * A method for you to override, that actually performs the heavy 
@@ -71,6 +77,18 @@ package object autowire {
      * all the way to the [[Router]]
      */
     def callRequest(req: Request): Future[String]
+  }
+
+  trait Server[Reader[_], Writer[_]]{
+    def read[Result: Reader](s: String): Result
+    def write[Result: Writer](v: Result): String
+
+    /**
+     * A method for you to override, that actually performs the heavy
+     * lifting to transmit the marshalled function call from the [[Client]]
+     * all the way to the [[Router]]
+     */
+    def route[Trait](f: Trait): Router = macro Macros.routeMacro[Trait, Reader, Writer]
   }
 }
 
