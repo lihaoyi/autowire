@@ -18,7 +18,7 @@ object InteropTests extends TestSuite{
   val tests = TestSuite {
     'reflection{
       trait Rw{
-        def write[T](t: T) = {
+        def write[T: Bounds.None](t: T) = {
           val buffer = new ByteArrayOutputStream()
           val oos = new ObjectOutputStream(buffer)
           oos.writeObject(t)
@@ -26,7 +26,7 @@ object InteropTests extends TestSuite{
           oos.close()
           buffer.toByteArray
         }
-        def read[T](s: Array[Byte]) = {
+        def read[T: Bounds.None](s: Array[Byte]) = {
           val in = new ByteArrayInputStream(s)
           val ois = new ObjectInputStream(in)
           val obj = ois.readObject()
@@ -34,11 +34,11 @@ object InteropTests extends TestSuite{
         }
       }
 
-      object Server extends autowire.Server[Array[Byte]] with Rw{
+      object Server extends autowire.Server[Array[Byte], Bounds.None, Bounds.None] with Rw{
         val routes = route[Api](Controller)
       }
 
-      object Client extends autowire.Client[Array[Byte]] with Rw{
+      object Client extends autowire.Client[Array[Byte], Bounds.None, Bounds.None] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
         def callRequest(r: Request) = {
           Server.routes
@@ -80,11 +80,11 @@ object InteropTests extends TestSuite{
         }
       }
 
-      object Server extends autowire.Server[Array[Byte]] with Rw{
+      object Server extends autowire.Server[Array[Byte], ClassTag, ClassTag] with Rw{
         val routes = route[Api](Controller)
       }
 
-      object Client extends autowire.Client[Array[Byte]] with Rw{
+      object Client extends autowire.Client[Array[Byte], ClassTag, ClassTag] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
         def callRequest(r: Request) = {
           Server.routes
@@ -109,20 +109,28 @@ object InteropTests extends TestSuite{
       )
     }
     'pickling {
+
+      type Two[T] = Bounds.Two[T, SPickler, FastTypeTag]
+
       trait Rw{
-        def write[T: SPickler: FastTypeTag](t: T): String = {
+        def write[T](t: T)(implicit b: Two[T]): String = {
+          implicit def t1: SPickler[T] = b.t1
+          implicit def t2: FastTypeTag[T] = b.t2
           t.pickle.value
         }
-        def read[T: Unpickler: FastTypeTag](s: String): T = {
+        def read[T](s: String)(implicit b: Two[T]): T = {
+          implicit def t1: SPickler[T] = b.t1
+          implicit def t2: FastTypeTag[T] = b.t2
           JSONPickle(s).unpickle[T]
         }
       }
 
-      object Server extends autowire.Server[String] with Rw{
+
+      object Server extends autowire.Server[String, Two, Two] with Rw{
         val routes = route[Api](Controller)
       }
 
-      object Client extends autowire.Client[String] with Rw{
+      object Client extends autowire.Client[String, Two, Two] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
         def callRequest(r: Request) = {
           Server.routes

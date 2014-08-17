@@ -11,6 +11,7 @@ object Build extends sbt.Build{
     version := "0.1.4",
     name := "autowire",
     scalaVersion := "2.11.2",
+    scalacOptions += "-Xlog-implicits",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value
     ) ++ (

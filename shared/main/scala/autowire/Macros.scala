@@ -65,7 +65,7 @@ object Macros {
           c.abort(x.pos, s"YY You can't call the .call() method on $x, only on autowired function calls")
       }
 
-      q"autowire.this.`package`.unwrapClientProxy[$trt, $pt, $clntTpe]($proxy)" <- Win(unwrapTree,
+      q"autowire.this.`package`.unwrapClientProxy[$trt, $pt, $rb, $wb, $clntTpe]($proxy)" <- Win(unwrapTree,
         s"XX You can't call the .call() method  on $contents, only on autowired function calls"
       )
       path = trt.tpe.widen

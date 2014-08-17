@@ -14,11 +14,11 @@ object UpickleTests extends TestSuite{
     def write[T: upickle.Writer](t: T) = upickle.write(t)
     def read[T: upickle.Reader](s: String) = upickle.read[T](s)
   }
-  object Server extends autowire.Server[String] with Rw{
+  object Server extends autowire.Server[String, upickle.Reader, upickle.Writer] with Rw{
     val routes = route[Api](Controller)
   }
 
-  object Client extends autowire.Client[String] with Rw{
+  object Client extends autowire.Client[String, upickle.Reader, upickle.Writer] with Rw{
     case class NoSuchRoute(msg: String) extends Exception(msg)
 
     def callRequest(r: Request) = {
