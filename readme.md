@@ -28,6 +28,8 @@ This provides a range of nice properties: under-the-hood the macro converts your
 
 Most importantly, the compiler is able to typecheck these RPCs, and ensure that you are always calling them with the correct arguments, and handling the return-value correctly in turn. This removes an entire class of errors.  
 
+Autowire is completely agnostic to both the serialization library, and the transport-mechanism.
+
 Getting Started
 ===============
 
@@ -159,12 +161,12 @@ object Core {
 }
 ```
  
-Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) is outside the scope of Autowire, as is how you serialize/deserialize the arguments/return-value using the `read` and `write` functions. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with unit tests to ensure that they are working.
+ is outside the scope of Autowire, as is how you serialize/deserialize the arguments/return-value using the `read` and `write` functions. 
 
 In short,
 
-- `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`.
-- `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. This should be pretty easy to send across any transport you choose.
+- `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with unit tests to ensure that they are working.
+- `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) and the response-data back is up to you as long as you can give Autowire a `Future[PickleType]` in exchange for its `Request`.  
 
 Why Autowire
 ============
@@ -198,7 +200,7 @@ def completeStuff(txt: String, flag: String, offset: Int): List[(String, String)
 
 // somewhere else inside an `async` block
 val res: List[(String, String)] = {
-  await(Post(_.completeStuff(code, flag, intOffset)))
+  await(Client[Api].completeStuff(code, flag, intOffset).call())
 }
 ```
 
