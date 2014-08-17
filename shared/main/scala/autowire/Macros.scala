@@ -62,11 +62,11 @@ object Macros {
 
           (rhs, call, args, liveStmts, deadStmts.map(_.name))
         case x =>
-          c.abort(x.pos, s"You can't call the .call() method on $x, only on autowired function calls")
+          c.abort(x.pos, s"YY You can't call the .call() method on $x, only on autowired function calls")
       }
 
-      q"autowire.this.`package`.unwrapClientProxy[$trt, $rdr, $wtr, $clntTpe]($proxy)" <- Win(unwrapTree,
-        s"You can't call the .call() method  on $contents, only on autowired function calls"
+      q"autowire.this.`package`.unwrapClientProxy[$trt, $pt, $clntTpe]($proxy)" <- Win(unwrapTree,
+        s"XX You can't call the .call() method  on $contents, only on autowired function calls"
       )
       path = trt.tpe.widen
                 .toString
@@ -104,11 +104,11 @@ object Macros {
   }
 
 
-  def routeMacro[Trait]
+  def routeMacro[Trait, PickleType]
                 (c: Context)
                 (f: c.Expr[Trait])
-                (implicit t: c.WeakTypeTag[Trait])
-                : c.Expr[Router] = {
+                (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+                : c.Expr[Router[PickleType]] = {
 //    println("-----------------------------------------------------")
 
     import c.universe._
@@ -148,8 +148,8 @@ object Macros {
         """
       frag
     }
-    val res = q"{case ..$routes}: autowire.Router"
-    c.Expr[Router](res)
+    val res = q"{case ..$routes}: autowire.Router[$pt]"
+    c.Expr(res)
   }
 }
 

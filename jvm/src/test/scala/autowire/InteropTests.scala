@@ -24,23 +24,23 @@ object InteropTests extends TestSuite{
           oos.writeObject(t)
           oos.flush()
           oos.close()
-          new String(buffer.toByteArray)
+          buffer.toByteArray
         }
-        def read[T](s: String) = {
-          val in = new ByteArrayInputStream(s.getBytes)
+        def read[T](s: Array[Byte]) = {
+          val in = new ByteArrayInputStream(s)
           val ois = new ObjectInputStream(in)
           val obj = ois.readObject()
           obj.asInstanceOf[T]
         }
       }
 
-      object Server extends autowire.Server with Rw{
+      object Server extends autowire.Server[Array[Byte]] with Rw{
         val routes = route[Api](Controller)
       }
 
-      object Client extends autowire.Client with Rw{
+      object Client extends autowire.Client[Array[Byte]] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request) = {
+        def callRequest(r: Request[Array[Byte]]) = {
           Server.routes
             .lift(r)
             .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
@@ -69,24 +69,24 @@ object InteropTests extends TestSuite{
         kryo.setInstantiatorStrategy(new StdInstantiatorStrategy())
         kryo.register(classOf[scala.collection.immutable.::[_]],60)
 
-        def write[T: ClassTag](t: T): String = {
+        def write[T: ClassTag](t: T) = {
           val output = new com.esotericsoftware.kryo.io.Output(new ByteArrayOutputStream())
           kryo.writeClassAndObject(output, t)
-          new String(output.toBytes)
+          output.toBytes
         }
-        def read[T: ClassTag](s: String): T = {
-          val input = new com.esotericsoftware.kryo.io.Input(new ByteArrayInputStream(s.getBytes))
+        def read[T: ClassTag](s: Array[Byte]): T = {
+          val input = new com.esotericsoftware.kryo.io.Input(new ByteArrayInputStream(s))
           kryo.readClassAndObject(input).asInstanceOf[T]
         }
       }
 
-      object Server extends autowire.Server with Rw{
+      object Server extends autowire.Server[Array[Byte]] with Rw{
         val routes = route[Api](Controller)
       }
 
-      object Client extends autowire.Client with Rw{
+      object Client extends autowire.Client[Array[Byte]] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request) = {
+        def callRequest(r: Request[Array[Byte]]) = {
           Server.routes
             .lift(r)
             .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
@@ -118,16 +118,16 @@ object InteropTests extends TestSuite{
         }
       }
 
-      object Server extends autowire.Server with Rw{
+      object Server extends autowire.Server[String] with Rw{
         val routes = route[Api](Controller)
       }
 
-      object Client extends autowire.Client with Rw{
+      object Client extends autowire.Client[String] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request) = {
+        def callRequest(r: Request[String]) = {
           Server.routes
-            .lift(r)
-            .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
+                .lift(r)
+                .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
         }
       }
 

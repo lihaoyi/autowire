@@ -31,7 +31,7 @@ package object autowire {
    * Being a normal `PartialFunction`, they can be manipulated and chained
    * (e.g. via `orElse` or `andThen`) like `PartialFunction`s normally are.
    */
-  type Router = PartialFunction[Request, Future[String]]
+  type Router[PickleType] = PartialFunction[Request[PickleType], Future[PickleType]]
 
   /**
    * A marshalled autowire'd function call.
@@ -44,45 +44,45 @@ package object autowire {
    *             exactly match the default value are omitted, and are
    *             simply re-constituted by the receiver.
    */
-  case class Request(path: Seq[String], args: Map[String, String])
+  case class Request[PickleType](path: Seq[String], args: Map[String, PickleType])
   implicit class Callable[T](t: T){
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
-  case class ClientProxy[Trait, ClientType <: Client](self: ClientType)
+  case class ClientProxy[Trait, PickleType, ClientType <: Client[PickleType]](self: ClientType)
 
   @compileTimeOnly("unwrapClientProxy should not exist at runtime!")
-  implicit def unwrapClientProxy[Trait, Reader[_], Writer[_], ClientType <: Client](w: ClientProxy[Trait, ClientType]): Trait = ???
+  implicit def unwrapClientProxy[Trait, PickleType, ClientType <: Client[PickleType]](w: ClientProxy[Trait, PickleType, ClientType]): Trait = ???
   /**
    * A client to make autowire'd function calls to a particular interface. 
    * A single client can only make calls to one interface, but it's not a 
    * huge deal. Just make a few clients (they can all inherit/delegate the 
    * `callRequest` method) if you want multiple targets.
    */
-  trait Client{
+  trait Client[PickleType]{
     /**
      * Actually makes a request
      *
      * @tparam Trait The interface that this autowire client makes its requests
      *               against.
      */
-    def apply[Trait]: ClientProxy[Trait, this.type] = ClientProxy[Trait, this.type](this)
+    def apply[Trait]: ClientProxy[Trait, PickleType, this.type] = ClientProxy[Trait, PickleType, this.type](this)
 
     /**
      * A method for you to override, that actually performs the heavy 
      * lifting to transmit the marshalled function call from the [[Client]]
      * all the way to the [[Router]]
      */
-    def callRequest(req: Request): Future[String]
+    def callRequest(req: Request[PickleType]): Future[PickleType]
   }
 
-  trait Server{
+  trait Server[PickleType]{
 
     /**
      * A method for you to override, that actually performs the heavy
      * lifting to transmit the marshalled function call from the [[Client]]
      * all the way to the [[Router]]
      */
-    def route[Trait](f: Trait): Router = macro Macros.routeMacro[Trait]
+    def route[Trait](f: Trait): Router[PickleType] = macro Macros.routeMacro[Trait, PickleType]
   }
 }
 

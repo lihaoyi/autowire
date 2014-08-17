@@ -14,14 +14,14 @@ object UpickleTests extends TestSuite{
     def write[T: upickle.Writer](t: T) = upickle.write(t)
     def read[T: upickle.Reader](s: String) = upickle.read[T](s)
   }
-  object Server extends autowire.Server with Rw{
+  object Server extends autowire.Server[String] with Rw{
     val routes = route[Api](Controller)
   }
 
-  object Client extends autowire.Client with Rw{
+  object Client extends autowire.Client[String] with Rw{
     case class NoSuchRoute(msg: String) extends Exception(msg)
 
-    def callRequest(r: Request) = {
+    def callRequest(r: Request[String]) = {
       Server.routes
             .lift(r)
             .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
@@ -94,7 +94,7 @@ object UpickleTests extends TestSuite{
     }
     'runtimeFailures{
       'noSuchRoute{
-        val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
+        val badRequest = Request[String](Seq("omg", "wtf", "bbq"), Map.empty)
         assert(!Server.routes.isDefinedAt(badRequest))
         intercept[MatchError] {
           Server.routes(badRequest)
@@ -102,7 +102,7 @@ object UpickleTests extends TestSuite{
       }
       'inputError{
         'keysMissing {
-          val badRequest = Request(Seq("autowire", "Api", "multiply"), Map.empty)
+          val badRequest = Request[String](Seq("autowire", "Api", "multiply"), Map.empty)
           assert(Server.routes.isDefinedAt(badRequest))
           intercept[InputError] {
             Server.routes(badRequest)
