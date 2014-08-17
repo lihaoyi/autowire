@@ -17,7 +17,7 @@ object InteropTests extends TestSuite{
 
   val tests = TestSuite {
     'reflection{
-      trait Rw{
+      object Bundle extends GenericClientServerBundle[Array[Byte], Bounds.None, Bounds.None]{
         def write[T: Bounds.None](t: T) = {
           val buffer = new ByteArrayOutputStream()
           val oos = new ObjectOutputStream(buffer)
@@ -32,20 +32,9 @@ object InteropTests extends TestSuite{
           val obj = ois.readObject()
           obj.asInstanceOf[T]
         }
+        def routes = Server.route[Api](Controller)
       }
-
-      object Server extends autowire.Server[Array[Byte], Bounds.None, Bounds.None] with Rw{
-        val routes = route[Api](Controller)
-      }
-
-      object Client extends autowire.Client[Array[Byte], Bounds.None, Bounds.None] with Rw{
-        case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request) = {
-          Server.routes
-            .lift(r)
-            .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
-        }
-      }
+      import Bundle.{Client, Server}
 
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())
@@ -63,7 +52,7 @@ object InteropTests extends TestSuite{
     }
 
     'kryo {
-      trait Rw{
+      object Bundle extends GenericClientServerBundle[Array[Byte], ClassTag, ClassTag]{
         val kryo = new com.esotericsoftware.kryo.Kryo()
         kryo.setRegistrationRequired(false)
         kryo.setInstantiatorStrategy(new StdInstantiatorStrategy())
@@ -78,66 +67,9 @@ object InteropTests extends TestSuite{
           val input = new com.esotericsoftware.kryo.io.Input(new ByteArrayInputStream(s))
           kryo.readClassAndObject(input).asInstanceOf[T]
         }
+        def routes = Server.route[Api](Controller)
       }
-
-      object Server extends autowire.Server[Array[Byte], ClassTag, ClassTag] with Rw{
-        val routes = route[Api](Controller)
-      }
-
-      object Client extends autowire.Client[Array[Byte], ClassTag, ClassTag] with Rw{
-        case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request) = {
-          Server.routes
-            .lift(r)
-            .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
-        }
-      }
-
-      val res1 = await(Client[Api].add(1, 2, 3).call())
-      val res2 = await(Client[Api].add(1).call())
-      val res3 = await(Client[Api].add(1, 2).call())
-
-      val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
-      val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-
-      assert(
-        res1 == "1+2+3",
-        res2 == "1+2+10",
-        res3 == "1+2+10",
-        res4 == "1.2*2.3",
-        res5 == "1.1*2.2*3.3*4.4"
-      )
-    }
-    'pickling {
-
-      type Two[T] = Bounds.Two[T, SPickler, FastTypeTag]
-
-      trait Rw{
-        def write[T](t: T)(implicit b: Two[T]): String = {
-          implicit def t1: SPickler[T] = b.t1
-          implicit def t2: FastTypeTag[T] = b.t2
-          t.pickle.value
-        }
-        def read[T](s: String)(implicit b: Two[T]): T = {
-          implicit def t1: SPickler[T] = b.t1
-          implicit def t2: FastTypeTag[T] = b.t2
-          JSONPickle(s).unpickle[T]
-        }
-      }
-
-
-      object Server extends autowire.Server[String, Two, Two] with Rw{
-        val routes = route[Api](Controller)
-      }
-
-      object Client extends autowire.Client[String, Two, Two] with Rw{
-        case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request) = {
-          Server.routes
-                .lift(r)
-                .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
-        }
-      }
+      import Bundle.{Client, Server}
 
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())

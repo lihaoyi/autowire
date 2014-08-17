@@ -11,7 +11,6 @@ object Build extends sbt.Build{
     version := "0.1.4",
     name := "autowire",
     scalaVersion := "2.11.2",
-    scalacOptions += "-Xlog-implicits",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value
     ) ++ (
@@ -58,9 +57,10 @@ object Build extends sbt.Build{
   )
 
   lazy val jvm = cross.jvm.settings(
+    resolvers += Resolver.sonatypeRepo("snapshots"),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % "0.2.2" % "test",
-      "org.scala-lang" %% "scala-pickling" % "0.8.0" % "test",
+      "org.scala-lang" %% "scala-pickling" % "0.9.0-SNAPSHOT" % "test",
       "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test"
     )
   )

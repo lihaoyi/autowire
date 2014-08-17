@@ -10,23 +10,12 @@ import utest.PlatformShims._
 
 
 object UpickleTests extends TestSuite{
-  trait Rw{
+  object Bundle extends GenericClientServerBundle[String, upickle.Reader, upickle.Writer]{
     def write[T: upickle.Writer](t: T) = upickle.write(t)
-    def read[T: upickle.Reader](s: String) = upickle.read[T](s)
+    def read[T: upickle.Reader](t: String) = upickle.read[T](t)
+    def routes = Server.route[Api](Controller)
   }
-  object Server extends autowire.Server[String, upickle.Reader, upickle.Writer] with Rw{
-    val routes = route[Api](Controller)
-  }
-
-  object Client extends autowire.Client[String, upickle.Reader, upickle.Writer] with Rw{
-    case class NoSuchRoute(msg: String) extends Exception(msg)
-
-    def callRequest(r: Request) = {
-      Server.routes
-            .lift(r)
-            .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
-    }
-  }
+  import Bundle.{Client, Server}
 
   import utest.PlatformShims.await
   println(utest.*)
