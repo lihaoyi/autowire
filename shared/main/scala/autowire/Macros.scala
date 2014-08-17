@@ -96,12 +96,8 @@ object Macros {
     }
 
     res match{
-      case Win(tree, s) =>
-//        println("WIN " + tree)
-        c.Expr[Future[Result]](tree)
-      case Luz(s) =>
-//        println("LUZ")
-        c.abort(c.enclosingPosition, s)
+      case Win(tree, s) => c.Expr[Future[Result]](tree)
+      case Luz(s) => c.abort(c.enclosingPosition, s)
     }
 
   }
@@ -109,14 +105,14 @@ object Macros {
 
   def routeMacro[Trait, PickleType]
                 (c: Context)
-                (f: c.Expr[Trait])
+                (target: c.Expr[Trait])
                 (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
                 : c.Expr[Router[PickleType]] = {
 //    println("-----------------------------------------------------")
 
     import c.universe._
-    val singleton = f
-    val tree = singleton.tree
+
+    val tree = target.tree
     val apiClass = weakTypeOf[Trait]
     val routes: Seq[Tree] = for{
       member <- apiClass.decls.toSeq
@@ -139,14 +135,14 @@ object Macros {
         else
           None
       }
-      val argName = c.freshName("args")
+      val argName = c.freshName[TermName]("args")
       val args =
         flatArgs.map{ case (arg, i) =>
 
           hasDefault(arg, i) match{
             case Some(defaultName) => q"""
               $argName.get(${arg.name.toString})
-                      .fold($singleton.${TermName(defaultName)})( x =>
+                      .fold($target.${TermName(defaultName)})( x =>
                      try ${c.prefix}.read[${arg.typeSignature}](x)
                      catch autowire.Internal.invalidHandler
                    )
@@ -163,11 +159,11 @@ object Macros {
       }
 
       val frag = cq""" autowire.Core.Request(Seq(..$path), $argName) =>
-        val keySet = args.keySet
+        val keySet = $argName.keySet
         val missing = Array(..$requiredArgs).filterNot(keySet.contains)
         if (!missing.isEmpty)
           throw new autowire.Error.MissingParams(missing)
-        ${futurize(c)(q"$singleton.$member(..$args)", member)}.map(${c.prefix}.write(_))
+        ${futurize(c)(q"$target.$member(..$args)", member)}.map(${c.prefix}.write(_))
       """
       frag
     }

@@ -50,7 +50,7 @@ trait Server[PickleType, Reader[_], Writer[_]] {
    * lifting to transmit the marshalled function call from the [[Client]]
    * all the way to the [[Router]]
    */
-  def route[Trait](f: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
+  def route[Trait](target: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
 
   def read[Result: Reader](p: PickleType): Result
   def write[Result: Writer](r: Result): PickleType
