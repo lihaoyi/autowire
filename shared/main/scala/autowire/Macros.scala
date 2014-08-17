@@ -163,7 +163,7 @@ object Macros {
 
       val nameNames: Seq[TermName] = flatArgs.map(x => x.name.toTermName)
       val assignment = flatArgs.foldLeft[Tree](q"autowire.Internal.HNil()") { (old, next) =>
-        pq"autowire.Internal.#:(${next.name.toTermName}: ${next.typeSignature}, $old)"
+        pq"autowire.Internal.#:(${next.name.toTermName}: ${next.typeSignature} @unchecked, $old)"
       }
 
       val requiredArgs = flatArgs.zipWithIndex.collect {
@@ -171,10 +171,8 @@ object Macros {
       }
 
       val frag = cq""" autowire.Core.Request(Seq(..$path), $argName) =>
-        autowire.Internal.validate($bindings) match{
-          case Left(failures) =>
-            throw autowire.Error.InvalidInput(failures.reverse:_*)
-          case Right(..$assignment) =>
+        autowire.Internal.doValidate($bindings) match{
+          case (..$assignment) =>
             ${futurize(c)(q"$target.$member(..$nameNames)", member)}.map(${c.prefix}.write(_))
         }
       """

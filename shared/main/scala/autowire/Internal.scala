@@ -2,7 +2,7 @@ package autowire
 
 import scala.concurrent.Future
 import language.experimental.macros
-import scala.annotation.compileTimeOnly
+import scala.annotation.{tailrec, compileTimeOnly}
 
 /**
  * Holds a bunch of implementation details, which need to be public
@@ -40,6 +40,7 @@ object Internal{
   final case class #:[+H, +T <: HList[Wrapper], Wrapper[+_]](head: Wrapper[H], tail: T) extends HList[Wrapper] {
     override def toString = head+" #: "+tail.toString
   }
+
   case class HNil[Wrapper[+_]]() extends HList[Wrapper]
   type Identity[+T] = T
   type FailMaybe[+T] = Either[Error.Param, T]
@@ -55,7 +56,14 @@ object Internal{
     case HNil() =>
       Right(HNil[Identity]())
   }
-
+  // HNil[FailMaybe] -> HNil[Identity]
+  // HCon[A, HNil[FailMaybe], FailMaybe]
+  def doValidate(current: HList[FailMaybe]): HList[Identity] = {
+    validate(current) match {
+      case Left(failures) => throw autowire.Error.InvalidInput(failures.reverse: _*)
+      case Right(res) => res
+    }
+  }
   def read[P, T](dict: Map[String, P], default: => FailMaybe[T], name: String, thunk: P => T): FailMaybe[T] = {
     dict.get(name).fold[Either[autowire.Error.Param, T]](default)( x =>
       util.Try(thunk(x)) match {
