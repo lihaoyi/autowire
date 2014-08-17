@@ -120,20 +120,6 @@ object UpickleTests extends TestSuite{
         }
       }
       'inputError{
-        'keysMissing {
-          def check(input: Map[String, String], expectedMissing: Seq[String]) = {
-            val badRequest = Core.Request[String](Seq("autowire", "Api", "multiply"), input)
-            assert(Server.routes.isDefinedAt(badRequest))
-            val e @ Error.MissingParams(params) = intercept[Error] {
-              Server.routes(badRequest)
-            }
-            assert(params == expectedMissing)
-            e
-          }
-          * - check(Map.empty, Seq("x", "ys"))
-          * - check(Map("x" -> "123"), Seq("ys"))
-          * - check(Map("ys" -> "[123]"), Seq("x"))
-        }
         def check(input: Map[String, String])(expectedError: PartialFunction[Throwable, Unit]) = {
           val badRequest = Core.Request(
             Seq("autowire", "Api", "multiply"),
@@ -143,41 +129,50 @@ object UpickleTests extends TestSuite{
           val error = intercept[Error] { Server.routes(badRequest) }
           assert(expectedError.isDefinedAt(error))
         }
+
+        'keysMissing {
+          def checkMissing(input: Map[String, String], expectedMissing: Seq[String]) = {
+            check(input){case Error.MissingParams(`expectedMissing`) =>}
+          }
+          * - checkMissing(Map.empty, Seq("x", "ys"))
+          * - checkMissing(Map("x" -> "123"), Seq("ys"))
+          * - checkMissing(Map("ys" -> "[123]"), Seq("x"))
+        }
         'keysInvalid - {
           * - check(Map("x" -> "[]", "ys" -> "234")) {
-            case Error.InvalidInput(Seq(
-            upickle.Invalid.Data(_, _),
-            upickle.Invalid.Data(_, _)
-            )) =>
+            case Error.InvalidInput(
+              upickle.Invalid.Data(Js.Arr(), _),
+              upickle.Invalid.Data(Js.Num(234), _)
+            ) =>
           }
           * - check(Map("x" -> "123", "ys" -> "234")) {
-            case Error.InvalidInput(Seq(
-            upickle.Invalid.Data(_, _)
-            )) =>
+            case Error.InvalidInput(
+              upickle.Invalid.Data(Js.Num(234), _)
+            ) =>
           }
           * - check(Map("x" -> "[]", "ys" -> "[234]")) {
-            case Error.InvalidInput(Seq(
-            upickle.Invalid.Data(_, _)
-            )) =>
+            case Error.InvalidInput(
+              upickle.Invalid.Data(Js.Arr(), _)
+            ) =>
           }
         }
 
         'invalidJson - {
           * - check(Map("x" -> "]", "ys" -> "2}34")) {
-            case Error.InvalidInput(Seq(
-              upickle.Invalid.Json(_, "]"),
-              upickle.Invalid.Json(_, "2}34")
-            )) =>
+            case Error.InvalidInput(
+                upickle.Invalid.Json(_, "]"),
+                upickle.Invalid.Json(_, "2}34")
+            ) =>
           }
           * - check(Map("x" -> "1", "ys" -> "2}34")) {
-            case Error.InvalidInput(Seq(
+            case Error.InvalidInput(
               upickle.Invalid.Json(_, "2}34")
-            )) =>
+            ) =>
           }
           * - check(Map("x" -> "]", "ys" -> "[234]")) {
-              case Error.InvalidInput(Seq(
-                upickle.Invalid.Json(_, "]")
-            )) =>
+            case Error.InvalidInput(
+              upickle.Invalid.Json(_, "]")
+            ) =>
           }
         }
       }

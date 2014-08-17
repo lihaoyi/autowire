@@ -178,7 +178,7 @@ object Macros {
         )
         autowire.Internal.validate($bindings) match{
           case Left(failures) =>
-            throw autowire.Error.InvalidInput(failures.reverse)
+            throw autowire.Error.InvalidInput(failures.reverse:_*)
           case Right(..$assignment) =>
             ${futurize(c)(q"$target.$member(..$nameNames)", member)}.map(${c.prefix}.write(_))
         }
