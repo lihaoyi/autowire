@@ -65,7 +65,7 @@ object Macros {
           c.abort(x.pos, s"You can't call the .call() method on $x, only on autowired function calls")
       }
 
-      q"autowire.this.`package`.unwrapClientProxy[$trt, $rdr, $wtr]($proxy)" <- Win(unwrapTree,
+      q"autowire.this.`package`.unwrapClientProxy[$trt, $rdr, $wtr, $clntTpe]($proxy)" <- Win(unwrapTree,
         s"You can't call the .call() method  on $contents, only on autowired function calls"
       )
       path = trt.tpe.widen
@@ -104,10 +104,10 @@ object Macros {
   }
 
 
-  def routeMacro[Trait, Reader[_], Writer[_]]
+  def routeMacro[Trait]
                 (c: Context)
                 (f: c.Expr[Trait])
-                (implicit t: c.WeakTypeTag[Trait], r: c.WeakTypeTag[Reader[_]], w: c.WeakTypeTag[Writer[_]])
+                (implicit t: c.WeakTypeTag[Trait])
                 : c.Expr[Router] = {
 //    println("-----------------------------------------------------")
 

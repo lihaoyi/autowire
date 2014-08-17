@@ -6,19 +6,19 @@ import utest.ExecutionContext.RunNow
 import upickle._
 import scala.annotation.Annotation
 import utest.PlatformShims._
-import autowire.InputError
-import autowire.Request
 
-object uServer extends autowire.Server[upickle.Reader, upickle.Writer]{
+object uServer extends autowire.Server{
   def write[T: upickle.Writer](t: T) = upickle.write(t)
   def read[T: upickle.Reader](s: String) = upickle.read[T](s)
   val routes = route[Api](Controller)
 }
 
-object uClient extends autowire.Client[upickle.Reader, upickle.Writer]{
+object uClient extends autowire.Client{
   case class NoSuchRoute(msg: String) extends Exception(msg)
+
   def write[T: upickle.Writer](t: T) = upickle.write(t)
   def read[T: upickle.Reader](s: String) = upickle.read[T](s)
+
   def callRequest(r: Request) = {
     uServer.routes
            .lift(r)
