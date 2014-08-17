@@ -58,7 +58,9 @@ object Build extends sbt.Build{
 
   lazy val jvm = cross.jvm.settings(
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % "0.2.2" % "test"
+      "com.lihaoyi" %% "upickle" % "0.2.2" % "test",
+      "org.scala-lang" %% "scala-pickling" % "0.8.0" % "test",
+      "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test"
     )
   )
 }
