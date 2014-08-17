@@ -132,35 +132,42 @@ object Macros {
       val path = apiClass.typeSymbol.fullName.toString.split('.').toSeq :+ member.name.toString
       val flatArgs =
         member.typeSignature
-              .paramLists
-              .flatten
-              .zipWithIndex
+          .paramLists
+          .flatten
+
 
       def hasDefault(arg: Symbol, i: Int) = {
-        val defaultName = s"${member.name}$$default$$${i+1}"
+        val defaultName = s"${member.name}$$default$$${i + 1}"
         if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
           Some(defaultName)
         else
           None
       }
       val argName = c.freshName[TermName]("args")
-      val args = flatArgs.map{ case (arg, i) =>
-        hasDefault(arg, i) match{
+      val args: Seq[Tree] = flatArgs.zipWithIndex.map { case (arg, i) =>
+        hasDefault(arg, i) match {
           case Some(defaultName) => q"""
             $argName.get(${arg.name.toString})
                     .fold($target.${TermName(defaultName)})( x =>
-                   try ${c.prefix}.read[${arg.typeSignature}](x)
-                   catch autowire.Internal.invalidHandler
-                 )
+                      ${c.prefix}.read[${arg.typeSignature}](x)
+                    )
           """
           case None => q"""
-            try ${c.prefix}.read[${arg.typeSignature}]($argName(${arg.name.toString}))
-            catch autowire.Internal.invalidHandler
+            ${c.prefix}.read[${arg.typeSignature}]($argName(${arg.name.toString}))
           """
         }
       }
 
-      val requiredArgs = flatArgs.collect{
+      val bindings = args.foldLeft[Tree](q"autowire.Internal.HNil[scala.util.Try]()") { (old, next) =>
+        q"autowire.Internal.#:(scala.util.Try($next), $old)"
+      }
+
+      val nameNames: Seq[TermName] = flatArgs.map(x => x.name.toTermName)
+      val assignment = flatArgs.foldLeft[Tree](q"autowire.Internal.HNil()") { (old, next) =>
+        pq"autowire.Internal.#:(Some(${next.name.toTermName}: ${next.typeSignature}), $old)"
+      }
+
+      val requiredArgs = flatArgs.zipWithIndex.collect {
         case (arg, i) if hasDefault(arg, i).isEmpty => arg.name.toString
       }
 
@@ -169,13 +176,21 @@ object Macros {
           $argName.keySet,
           Array(..$requiredArgs)
         )
-        ${futurize(c)(q"$target.$member(..$args)", member)}.map(${c.prefix}.write(_))
+        autowire.Internal.validate($bindings) match{
+          case Left(failures) =>
+            throw autowire.Error.InvalidInput(failures.reverse)
+          case Right(..$assignment) =>
+            ${futurize(c)(q"$target.$member(..$nameNames)", member)}.map(${c.prefix}.write(_))
+        }
+
       """
+
+
       frag
     }
 
     val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
-//    println(res)
+    println(res)
     c.Expr(res)
   }
 }

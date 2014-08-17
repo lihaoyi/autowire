@@ -34,7 +34,7 @@ object Error{
    * raw input into structured data. The original exception is
    * preserved so you can see what happened.
    */
-  case class InvalidInput(ex: Throwable) extends Exception(ex) with Error
+  case class InvalidInput(ex: Seq[Throwable]) extends Exception(ex(0)) with Error
   case class MissingParams(params: Seq[String]) extends Exception(
     s"Missing parameters! ${params.mkString(", ")} were not found."
   ) with Error

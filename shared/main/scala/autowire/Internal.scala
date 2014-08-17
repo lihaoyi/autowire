@@ -29,33 +29,33 @@ object Internal{
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
 
-  val invalidHandler: PartialFunction[Throwable, Nothing] = {
-    case e => throw Error.InvalidInput(e)
-  }
   def checkKeys(keySet: Set[String], requiredArgs: Array[String]) = {
     val missing = requiredArgs.filterNot(keySet.contains)
     if (!missing.isEmpty)
       throw new autowire.Error.MissingParams(missing)
   }
-  sealed trait HList{
-    def #:[H](h : H) = Internal.#:(h, this)
+  sealed trait HList[Wrapper[+_]]{
+    def #:[H](h : Wrapper[H]) = Internal.#:(h, this)
   }
 
-
-  final case class #:[+H, +T <: HList](head: H, tail: T) extends HList {
+  final case class #:[+H, +T <: HList[Wrapper], Wrapper[+_]](head: Wrapper[H], tail: T) extends HList[Wrapper] {
     override def toString = head+" #: "+tail.toString
   }
-  case object HNil extends HList
+  case class HNil[Wrapper[+_]]() extends HList[Wrapper]
 
 
-  def validate[T <: HList](current: T): Either[List[Throwable], T] = current match {
+  def validate(current: HList[util.Try]): Either[List[Throwable], HList[Some]] = current match {
     case #:(first, rest) =>
-      (first, validate(rest)) match {
+      val x = (first, validate(rest)) match {
         case (util.Success(_), Left(errors)) => Left(errors)
-        case (util.Success(success), Right(successes)) => Right((success #: successes).asInstanceOf[T])
+        case (util.Success(success), Right(successes)) => Right(Some(success) #: successes)
         case (util.Failure(error), Left(errors)) => Left(error :: errors)
         case (util.Failure(error), Right(successes)) => Left(error :: Nil)
       }
-    case HNil => Right(HNil.asInstanceOf[T])
+      println("VALIDATED " + x)
+      x
+    case HNil() =>
+      println("VALIDATED " + HNil)
+      Right(HNil[Some]())
   }
 }

@@ -133,33 +133,52 @@ object UpickleTests extends TestSuite{
           * - check(Map.empty, Seq("x", "ys"))
           * - check(Map("x" -> "123"), Seq("ys"))
           * - check(Map("ys" -> "[123]"), Seq("x"))
+        }
+        def check(input: Map[String, String])(expectedError: PartialFunction[Throwable, Unit]) = {
+          val badRequest = Core.Request(
+            Seq("autowire", "Api", "multiply"),
+            input
+          )
+          assert(Server.routes.isDefinedAt(badRequest))
+          val error = intercept[Error] { Server.routes(badRequest) }
+          assert(expectedError.isDefinedAt(error))
+        }
+        'keysInvalid - {
+          * - check(Map("x" -> "[]", "ys" -> "234")) {
+            case Error.InvalidInput(Seq(
+            upickle.Invalid.Data(_, _),
+            upickle.Invalid.Data(_, _)
+            )) =>
+          }
+          * - check(Map("x" -> "123", "ys" -> "234")) {
+            case Error.InvalidInput(Seq(
+            upickle.Invalid.Data(_, _)
+            )) =>
+          }
+          * - check(Map("x" -> "[]", "ys" -> "[234]")) {
+            case Error.InvalidInput(Seq(
+            upickle.Invalid.Data(_, _)
+            )) =>
+          }
+        }
 
-        }
-        'keysInvalid {
-          val badRequest = Core.Request(
-            Seq("autowire", "Api", "multiply"),
-            Map("x" -> "[]", "ys" -> "[1, 2]")
-          )
-          assert(Server.routes.isDefinedAt(badRequest))
-          val e @ Error.InvalidInput(
-          upickle.Invalid.Data(upickle.Js.Arr(), "Number")
-          ) = intercept[Error] {
-            Server.routes(badRequest)
+        'invalidJson - {
+          * - check(Map("x" -> "]", "ys" -> "2}34")) {
+            case Error.InvalidInput(Seq(
+              upickle.Invalid.Json(_, "]"),
+              upickle.Invalid.Json(_, "2}34")
+            )) =>
           }
-          e
-        }
-        'invalidJson{
-          val badRequest = Core.Request(
-            Seq("autowire", "Api", "multiply"),
-            Map("x" -> "[", "ys" -> "[1, 2]")
-          )
-          assert(Server.routes.isDefinedAt(badRequest))
-          val e @ Error.InvalidInput(
-            upickle.Invalid.Json(_, _)
-          ) = intercept[Error] {
-            Server.routes(badRequest)
+          * - check(Map("x" -> "1", "ys" -> "2}34")) {
+            case Error.InvalidInput(Seq(
+              upickle.Invalid.Json(_, "2}34")
+            )) =>
           }
-          e
+          * - check(Map("x" -> "]", "ys" -> "[234]")) {
+              case Error.InvalidInput(Seq(
+                upickle.Invalid.Json(_, "]")
+            )) =>
+          }
         }
       }
     }
