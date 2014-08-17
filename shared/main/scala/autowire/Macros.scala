@@ -41,12 +41,9 @@ object Macros {
                  (implicit r: c.WeakTypeTag[Result])
                  : c.Expr[Future[Result]] = {
     import c.universe._
-    println("c.prefix " + c.prefix)
     // If the tree is one of those default-argument containing blocks or
     // functions, pry it apart such that the main logic can operate on the
     // inner tree, and leave instructions on how
-
-    println(c.prefix.tree)
     val res = for {
       q"autowire.this.`package`.Callable[$t]($contents)" <- Win(c.prefix.tree,
         "You can only .call() on the Proxy returned by autowire.Client.apply"
@@ -87,7 +84,6 @@ object Macros {
         .map{case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write($t)"}
 
     } yield {
-//      println(method.returnType)
       q"""{
         ..$prelude;
         $proxy.self.callRequest(
@@ -98,73 +94,13 @@ object Macros {
 
     res match{
       case Win(tree, s) =>
-        println("WIN " + tree)
+//        println("WIN " + tree)
         c.Expr[Future[Result]](tree)
       case Luz(s) =>
-        println("LUZ")
+//        println("LUZ")
         c.abort(c.enclosingPosition, s)
     }
 
-//    val wrapper = ""
-//
-//
-//    val concreteType = c.prefix.actualType
-//    val markerType = typeParamType.asSeenFrom(concreteType, clientType)
-//
-//    // If the tree is one of those default-argument containing blocks or
-//    // functions, pry it apart such that the main logic can operate on the
-//    // inner tree, and leave instructions on how
-//    val (inner: Tree, dead: Set[TermName], wrap: (Tree => Tree)) = c.prefix.tree match{
-//      case t @ q"($src1) => $lol" => (lol, Set.empty, (x: Tree) => x)
-//      case t @ q"..${statements: List[ValDef]}; $last"
-//        if statements.length > 0
-//          && statements.forall(ValDef.unapply(_).isDefined) =>
-//
-//        val (liveStmts, deadStmts) = (statements: List[ValDef]).partition {
-//          case ValDef(mod, _, _, Select(singleton, name))
-//            if name.toString.contains("$default") => false
-//          case _ => true
-//        }
-//
-//        (last, deadStmts.map(_.name).toSet,(t: Tree) => q"..$liveStmts; $t")
-//      case x => (x, Set.empty, (y: Tree) => y)
-//    }
-//    val check = for{
-//      t @ q"$src2.$method(..$args)" <- Win(inner,
-//        "Invalid contents: contents of `Handler.apply` must be a single " +
-//        s"function call to a method on a top-level object marked with @$markerType"
-//      )
-//      path = src2
-//        .tpe
-//        .widen
-//        .toString
-//        .split('.')
-//        .toSeq
-//        .:+(method.toString)
-//
-//      pickled = args
-//        .zip(t.symbol.asMethod.paramLists.flatten)
-//        .filter{
-//          case (Ident(name: TermName), _) => !dead(name)
-//          case (q"$thing.$name", _) if name.toString.contains("$default$") => false
-//          case _ => true
-//        }
-//        .map{case (t, param: Symbol) => q"${param.name.toString} -> ${c.prefix}.write($t)"}
-//
-//
-//    } yield {
-//
-//      wrap(q"""(
-//        ${c.prefix}.callRequest(
-//          autowire.Request(Seq(..$path), Map(..$pickled))
-//        ).map(${c.prefix}.read(_)(${wrapper}.r))
-//      )""")
-//    }
-//
-//    check match{
-//      case Win(tree, s) => c.Expr[Future[Result]](tree)
-//      case Luz(s) => c.abort(c.enclosingPosition, s)
-//    }
   }
 
 
@@ -178,12 +114,9 @@ object Macros {
     import c.universe._
     val singleton = f
     val tree = singleton.tree
-//    println("TRAIT TAG " + t)
     val apiClass = weakTypeOf[Trait]
-//    println("apiClass " + apiClass)
     val routes: Seq[Tree] = for{
       member <- apiClass.decls.toSeq
-      _ = println("MEMBER " + member)
       // not some rubbish defined on AnyRef
       if !weakTypeOf[AnyRef].members.exists(_.name == member.name)
       // Not a default value synthetic methods
@@ -216,7 +149,6 @@ object Macros {
       frag
     }
     val res = q"{case ..$routes}: autowire.Router"
-//    println("ROUTE RES " + res)
     c.Expr[Router](res)
   }
 }

@@ -4,34 +4,57 @@ import scala.concurrent.Future
 import java.io.{ObjectInputStream, ByteArrayInputStream, ObjectOutputStream, ByteArrayOutputStream}
 import utest.util.Tree
 import utest.framework.Test
+import utest.ExecutionContext.RunNow
 import scala.reflect.ClassTag
-
-object ReflectionClient extends autowire.Client[ClassTag, ClassTag]{
-//  val router = Macros.route[Api, ClassTag, ClassTag](Controller)
-//  case class NoSuchRoute(msg: String) extends Exception(msg)
+import utest._
+trait ReflectRw{
   def write[T: ClassTag](t: T) = {
-//    val bo = new ByteArrayOutputStream()
-//    val so = new ObjectOutputStream(bo)
-//    so.writeObject(t)
-//    so.flush()
-//    bo.toString
-    ???
+    val buffer = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream(buffer)
+    oos.writeObject(t)
+    oos.flush()
+    oos.close()
+    new String(buffer.toByteArray)
   }
   def read[T: ClassTag](s: String) = {
-//    val b = s.getBytes
-//    val bi = new ByteArrayInputStream(b)
-//    val si = new ObjectInputStream(bi)
-//    si.readObject().asInstanceOf[T]
-    ???
-  }
-  def callRequest(r: Request) = {
-    ???
-//    router.lift(r)
-//      .getOrElse(Future.failed(new NoSuchRoute("nope!")))
+    val in = new ByteArrayInputStream(s.getBytes)
+    val ois = new ObjectInputStream(in)
+    val obj = ois.readObject()
+    obj.asInstanceOf[T]
   }
 }
-//object OtherTests extends TestSuite{
-//  val tests = {
-//    println("Hello World")
-//  }
-//}
+
+object ReflectServer extends autowire.Server[ClassTag, ClassTag] with ReflectRw{
+  val routes = route[Api](Controller)
+}
+
+object ReflectClient extends autowire.Client[ClassTag, ClassTag] with ReflectRw{
+  case class NoSuchRoute(msg: String) extends Exception(msg)
+  def callRequest(r: Request) = {
+    ReflectServer.routes
+      .lift(r)
+      .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
+  }
+}
+
+object OtherTests extends TestSuite{
+  import utest.PlatformShims.await
+  println(utest.*)
+  val tests = TestSuite {
+    'basicCalls{
+      val res1 = await(ReflectClient[Api].add(1, 2, 3).call())
+      val res2 = await(ReflectClient[Api].add(1).call())
+      val res3 = await(ReflectClient[Api].add(1, 2).call())
+      val res4 = await(ReflectClient[Api].multiply(x = 1.2, Seq(2.3)).call())
+      val res5 = await(ReflectClient[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
+
+      assert(
+        res1 == "1+2+3",
+        res2 == "1+2+10",
+        res3 == "1+2+10",
+        res4 == "1.2*2.3",
+        res5 == "1.1*2.2*3.3*4.4"
+      )
+    }
+  }
+}

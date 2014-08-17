@@ -3,7 +3,9 @@ import scala.concurrent.Future
 import language.experimental.macros
 
 package object autowire {
-  case class InputError(ex: Throwable) extends Exception
+  case class InputError(ex: Throwable) extends Exception(
+    "There was a failure de-serializing input", ex
+  )
 
   object Internal{
     val invalidHandler: PartialFunction[Throwable, Nothing] = {

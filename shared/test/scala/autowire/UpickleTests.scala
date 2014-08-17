@@ -5,6 +5,9 @@ import scala.concurrent.duration._
 import utest.ExecutionContext.RunNow
 import upickle._
 import scala.annotation.Annotation
+import utest.PlatformShims._
+import autowire.InputError
+import autowire.Request
 
 object uServer extends autowire.Server[upickle.Reader, upickle.Writer]{
   def write[T: upickle.Writer](t: T) = upickle.write(t)
@@ -24,6 +27,9 @@ object uClient extends autowire.Client[upickle.Reader, upickle.Writer]{
 }
 
 object UpickleTests extends TestSuite{
+
+
+
   import utest.PlatformShims.await
   println(utest.*)
   val tests = TestSuite{
