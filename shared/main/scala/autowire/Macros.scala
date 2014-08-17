@@ -139,20 +139,20 @@ object Macros {
         else
           None
       }
-
+      val argName = c.freshName("args")
       val args =
         flatArgs.map{ case (arg, i) =>
 
           hasDefault(arg, i) match{
             case Some(defaultName) => q"""
-              args.get(${arg.name.toString})
-                  .fold($singleton.${TermName(defaultName)})( x =>
+              $argName.get(${arg.name.toString})
+                      .fold($singleton.${TermName(defaultName)})( x =>
                      try ${c.prefix}.read[${arg.typeSignature}](x)
                      catch autowire.Internal.invalidHandler
                    )
             """
             case None => q"""
-              try ${c.prefix}.read[${arg.typeSignature}](args(${arg.name.toString}))
+              try ${c.prefix}.read[${arg.typeSignature}]($argName(${arg.name.toString}))
               catch autowire.Internal.invalidHandler
             """
           }
@@ -162,7 +162,7 @@ object Macros {
         case (arg, i) if hasDefault(arg, i).isEmpty => arg.name.toString
       }
 
-      val frag = cq""" autowire.Core.Request(Seq(..$path), args) =>
+      val frag = cq""" autowire.Core.Request(Seq(..$path), $argName) =>
         val keySet = args.keySet
         val missing = Array(..$requiredArgs).filterNot(keySet.contains)
         if (!missing.isEmpty)
