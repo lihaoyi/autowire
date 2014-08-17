@@ -1,4 +1,4 @@
-Autowire 0.2.0
+Autowire 0.2.1
 ==============
 
 Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
@@ -36,8 +36,8 @@ Getting Started
 Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS respectively:
 
 ```scala
-"com.lihaoyi" %% "autowire" % "0.2.0"
-"com.lihaoyi" %%% "autowire" % "0.2.0"
+"com.lihaoyi" %% "autowire" % "0.2.1"
+"com.lihaoyi" %%% "autowire" % "0.2.1"
 ```
 
 It's only available for Scala 2.11.x and Scala.js 0.5.3+. Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
@@ -84,6 +84,8 @@ MyClient[MyApi].doThing(3, "lol").call().foreach(println)
 In this example, we have a shared `MyApi` trait, which contains a trait/interface which is shared by both client and server. The server contains an implementation of this trait, while the client can make calls against the trait using the `route` macro provided by `MyServer`.
 
 Although in this example everything is happening locally, this example goes through the entire serialization/de-serialization process when transferring the arguments/return-value. Thus, it is trivial to replace the direct call to `MyServer.routes` to a remote call over HTTP or TCP or some other transport with `MyClient` and `MyServer`/`MyApiImpl` living on different machines or even running on different platforms (e.g. Scala-JS/Scala-JVM).
+
+Here's a [longer example](https://github.com/lihaoyi/workbench-example-app/tree/autowire), which takes advantage of autowire's cross-platform-ness to write an interactive client-server web-app.  
 
 Reference
 =========
@@ -167,6 +169,8 @@ In short,
 
 - `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with [unit tests](blob/master/jvm/src/test/scala/autowire/InteropTests.scala) to ensure that they are working.
 - `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) and the response-data back is up to you as long as you can give Autowire a `Future[PickleType]` in exchange for its `Request`.  
+
+If you still don't fully understand, and need help getting something working, take a look at the [complete example](https://github.com/lihaoyi/workbench-example-app/tree/autowire).  
 
 Why Autowire
 ============
