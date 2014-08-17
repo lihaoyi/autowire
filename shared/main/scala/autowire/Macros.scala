@@ -161,10 +161,10 @@ object Macros {
       }
 
       val frag = cq""" autowire.Core.Request(Seq(..$path), $argName) =>
-        val keySet = $argName.keySet
-        val missing = Array(..$requiredArgs).filterNot(keySet.contains)
-        if (!missing.isEmpty)
-          throw new autowire.Error.MissingParams(missing)
+        autowire.Internal.checkKeys(
+          $argName.keySet,
+          Array(..$requiredArgs)
+        )
         ${futurize(c)(q"$target.$member(..$args)", member)}.map(${c.prefix}.write(_))
       """
       frag

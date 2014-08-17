@@ -32,4 +32,9 @@ object Internal{
   val invalidHandler: PartialFunction[Throwable, Nothing] = {
     case e => throw Error.InvalidInput(e)
   }
+  def checkKeys(keySet: Set[String], requiredArgs: Array[String]) = {
+    val missing = requiredArgs.filterNot(keySet.contains)
+    if (!missing.isEmpty)
+      throw new autowire.Error.MissingParams(missing)
+  }
 }
