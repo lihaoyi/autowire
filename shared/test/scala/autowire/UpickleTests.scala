@@ -26,14 +26,16 @@ object UpickleTests extends TestSuite{
       val res3 = await(Client[Api].add(1, 2).call())
       val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
       val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-
+      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
         res3 == "1+2+10",
         res4 == "1.2*2.3",
-        res5 == "1.1*2.2*3.3*4.4"
+        res5 == "1.1*2.2*3.3*4.4",
+        res6 == Point(11, 22)
       )
+      Bundle.transmitted.last
     }
     'aliased{
       val api = Client[Api]
