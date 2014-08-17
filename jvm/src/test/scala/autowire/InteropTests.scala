@@ -12,12 +12,11 @@ import json._
 import org.objenesis.strategy.StdInstantiatorStrategy
 
 
-object OtherTests extends TestSuite{
+object InteropTests extends TestSuite{
   import utest.PlatformShims.await
-  println(utest.*)
+
   val tests = TestSuite {
     'reflection{
-
       trait Rw{
         def write[T](t: T) = {
           val buffer = new ByteArrayOutputStream()
@@ -47,8 +46,6 @@ object OtherTests extends TestSuite{
             .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
         }
       }
-
-
 
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())

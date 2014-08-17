@@ -7,38 +7,36 @@ import upickle._
 import scala.annotation.Annotation
 import utest.PlatformShims._
 
-object uServer extends autowire.Server{
-  def write[T: upickle.Writer](t: T) = upickle.write(t)
-  def read[T: upickle.Reader](s: String) = upickle.read[T](s)
-  val routes = route[Api](Controller)
-}
 
-object uClient extends autowire.Client{
-  case class NoSuchRoute(msg: String) extends Exception(msg)
-
-  def write[T: upickle.Writer](t: T) = upickle.write(t)
-  def read[T: upickle.Reader](s: String) = upickle.read[T](s)
-
-  def callRequest(r: Request) = {
-    uServer.routes
-           .lift(r)
-           .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
-  }
-}
 
 object UpickleTests extends TestSuite{
+  trait Rw{
+    def write[T: upickle.Writer](t: T) = upickle.write(t)
+    def read[T: upickle.Reader](s: String) = upickle.read[T](s)
+  }
+  object Server extends autowire.Server with Rw{
+    val routes = route[Api](Controller)
+  }
 
+  object Client extends autowire.Client with Rw{
+    case class NoSuchRoute(msg: String) extends Exception(msg)
 
+    def callRequest(r: Request) = {
+      Server.routes
+            .lift(r)
+            .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
+    }
+  }
 
   import utest.PlatformShims.await
   println(utest.*)
   val tests = TestSuite{
     'basicCalls{
-      val res1 = await(uClient[Api].add(1, 2, 3).call())
-      val res2 = await(uClient[Api].add(1).call())
-      val res3 = await(uClient[Api].add(1, 2).call())
-      val res4 = await(uClient[Api].multiply(x = 1.2, Seq(2.3)).call())
-      val res5 = await(uClient[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
+      val res1 = await(Client[Api].add(1, 2, 3).call())
+      val res2 = await(Client[Api].add(1).call())
+      val res3 = await(Client[Api].add(1, 2).call())
+      val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
+      val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
 
       assert(
         res1 == "1+2+3",
@@ -49,7 +47,7 @@ object UpickleTests extends TestSuite{
       )
     }
     'aliased{
-      val api = uClient[Api]
+      val api = Client[Api]
       val res = await(api.add(1, 2, 4).call())
       assert(res == "1+2+4")
     }
@@ -76,20 +74,20 @@ object UpickleTests extends TestSuite{
       )
 
       * - check(
-        compileError("uClient[Api].add(1, 2, 3).toString.call()"),
+        compileError("Client[Api].add(1, 2, 3).toString.call()"),
         """
-        compileError("uClient[Api].add(1, 2, 3).toString.call()"),
-                                                             ^
+        compileError("Client[Api].add(1, 2, 3).toString.call()"),
+                                                            ^
         """,
         "You can't call the .call() method",
         "add(1, 2, 3).toString()"
       )
 
       * - check(
-        compileError("uClient[Api].fail1().call()"),
+        compileError("Client[Api].fail1().call()"),
         """
-        compileError("uClient[Api].fail1().call()"),
-                                   ^
+        compileError("Client[Api].fail1().call()"),
+                                  ^
         """.stripMargin,
         "value fail1 is not a member of autowire.ClientProxy"
       )
@@ -97,17 +95,17 @@ object UpickleTests extends TestSuite{
     'runtimeFailures{
       'noSuchRoute{
         val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
-        assert(!uServer.routes.isDefinedAt(badRequest))
+        assert(!Server.routes.isDefinedAt(badRequest))
         intercept[MatchError] {
-          uServer.routes(badRequest)
+          Server.routes(badRequest)
         }
       }
       'inputError{
         'keysMissing {
           val badRequest = Request(Seq("autowire", "Api", "multiply"), Map.empty)
-          assert(uServer.routes.isDefinedAt(badRequest))
+          assert(Server.routes.isDefinedAt(badRequest))
           intercept[InputError] {
-            uServer.routes(badRequest)
+            Server.routes(badRequest)
           }
         }
         'keysInvalid{
@@ -115,11 +113,11 @@ object UpickleTests extends TestSuite{
             Seq("autowire", "Api", "multiply"),
             Map("x" -> "[]", "ys" -> "[1, 2]")
           )
-          assert(uServer.routes.isDefinedAt(badRequest))
+          assert(Server.routes.isDefinedAt(badRequest))
           val InputError(
             upickle.Invalid.Data(upickle.Js.Arr(), "Number")
           ) = intercept[InputError] {
-            uServer.routes(badRequest)
+            Server.routes(badRequest)
           }
         }
         'invalidJson{
@@ -127,11 +125,11 @@ object UpickleTests extends TestSuite{
             Seq("autowire", "Api", "multiply"),
             Map("x" -> "[", "ys" -> "[1, 2]")
           )
-          assert(uServer.routes.isDefinedAt(badRequest))
+          assert(Server.routes.isDefinedAt(badRequest))
           val InputError(
             upickle.Invalid.Json(_, _)
           ) = intercept[InputError] {
-            uServer.routes(badRequest)
+            Server.routes(badRequest)
           }
         }
       }
