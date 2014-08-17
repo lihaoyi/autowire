@@ -6,9 +6,6 @@ import utest.ExecutionContext.RunNow
 import upickle._
 import scala.annotation.Annotation
 
-
-
-
 object uServer extends autowire.Server[upickle.Reader, upickle.Writer]{
   def write[T: upickle.Writer](t: T) = upickle.write(t)
   def read[T: upickle.Reader](s: String) = upickle.read[T](s)
@@ -80,6 +77,15 @@ object UpickleTests extends TestSuite{
         """,
         "You can't call the .call() method",
         "add(1, 2, 3).toString()"
+      )
+
+      * - check(
+        compileError("uClient[Api].fail1().call()"),
+        """
+        compileError("uClient[Api].fail1().call()"),
+                                   ^
+        """.stripMargin,
+        "value fail1 is not a member of autowire.ClientProxy"
       )
     }
     'runtimeFailures{
