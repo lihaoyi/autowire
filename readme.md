@@ -1,130 +1,170 @@
-Autowire 0.1.4
+Autowire 0.2.0
 ==============
 
 Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
 
-
 ```scala    
-Client: autowire.Client[Api]
-Client(_.add(1, 2, 3): T): Future[T]
-//       |     |             |
-//       |     |             The T is pickled and wrapped in a Future[T]
-//       |     The arguments to that method are pickled automatically
-//       Call a method on the `Api` trait
-```
-
-To do this, it provides two macros: one for the client to make these type-safe calls which are then marshalled into RPCs
-
-```scala
-abstract class Client[T]{
-  def apply[R: upickle.Reader](f: T => R): Future[R] = macro Macros.ajaxMacro[R]
-  def callRequest(req: Request): Future[String]
+// shared interface
+trait Api{
+  def add(x: Int, y: Int, z: Int): Int 
 }
+
+// server-side router and implementation 
+object Server extends autowire.Server...
+object ApiImpl extends Api
+  def add(x: Int, y: Int, z: Int) = x + y + z 
+}
+
+// client-side callsite
+object Client extends autowire.Client...
+Client[Api].add(1, 2, 3).call(): Future[Int]
+//         |    |             |
+//         |    |             The T is pickled and wrapped in a Future[T]
+//         |    The arguments to that method are pickled automatically
+//         Call a method on the `Api` trait
 ```
 
-And routing of calls on the other end done via the `route` macro
+This provides a range of nice properties: under-the-hood the macro converts your method calls into RPCs, together with the relevant serialization code, but you do not need to deal with that yourself. Furthermore, since the RPCs appear to be method calls, tools like IDEs are able to work with them, e.g. doing project-wide renames or analysis (jump-to-definition, find-usages, etc.). 
+
+Most importantly, the compiler is able to typecheck these RPCs, and ensure that you are always calling them with the correct arguments, and handling the return-value correctly in turn. This removes an entire class of errors.  
+
+Getting Started
+===============
+
+Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS respectively:
 
 ```scala
-def route(handlers: Singleton*): PartialFunction[Request, Future[String]]
+"com.lihaoyi" %% "autowire" % "0.2.0"
+"com.lihaoyi" %%% "autowire" % "0.2.0"
 ```
 
-With the `Request` data structure being defined as 
-
-```scala
-case class Request(path: Seq[String], args: Map[String, String])
-```
-
-This allows you to safely wire up disparate endpoints across the internet, taking care of all the serialization for you using [uPickle](https://github.com/lihaoyi/upickle). Nevertheless, autowire still gives you full control of piping the data across some underlying transport (Ajax, tcp, etc.) by overriding the `callRequest` method, or deciding how to handle the data on the server before handing over to the `route`. As long as you are able to transmit the `Request` from the client and can provide a `Request` to `route`'s partial function, Autowire doesn't care how you do it.
+It's only available for Scala 2.11.x and Scala.js 0.5.3+. Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
 
 Minimal Example
 ===============
-
-A minimal example of how Autowire works can be found in the unit tests:
-
-```scala
-trait Api{
-  def multiply(x: Double, ys: Seq[Double]): String
-}
-
-// Object implementing the RPC public interface
-object Controller extends Api{
-  def multiply(x: Double, ys: Seq[Double]): String = x + ys.map("*"+_).mkString
-}
-
-// RPC Client which talks to any interface of kind `RPC` 
-object Client extends autowire.Client[Api]{
-
-  // Auto-generates the routes to the various methods of `Controller`
-  val router = Macros.route[Api](Controller)
-
-  // Delegate the `Request` object directly; in other 
-  // circumstances this could go over the network or Ajax  
-  def callRequest(r: Request) = router(r)
-}
-```
-
-This defines and wires up everything. The `route` macro takes a list of objects which implement some trait annotated with (in this case) `Rpc`, and statically generates a set of routes that route incoming `Request` objects to the functions exposed by the `Rpc`-annotated traits. After that, you can make RPC calls via
+Here is a minimal example of Autowire in action, using [uPickle](https://www.github.com/lihaoyi/upickle) to serialize the transferred data:
 
 ```scala
-println(await(Client(_.add(1, 2, 3)))) // "1+2+3"
-```
+import autowire._
+import upickle._
 
-Where the `Client(_.add(1, 2, 3))` is a macro that expands to the code necessary to generate a `Request` object in the first place and hands it to the `Client.callRequest` method.
-
-In this case, `callRequest` just hands the `Request` directly to the `route` function, but you could easily do the same thing but passing the `Request` object over an Ajax call, TCP, Websockets, etc. as long as you have some way of getting the `Request` object from `callRequest` to the `route` function at the other end.
-
-Usage With ScalaJS
-==================
-
-The fact that Autowire works perfectly fine across both Scala-JVM and Scala-JS makes it ideal for wiring up your web-server and client code for making type-safe, statically-checked Ajax requests. For example, [Scala-Js-Fiddle](http://www.scala-js-fiddle.com) uses it extensively for client-server calls. To do this, we have essentially the same code as above, except that instead of `callRequest` being a direct call to the `router`, we need to instead shuttle the data over HTTP:
- 
-```scala
-object Post extends autowire.Client[Api]{
-  override def callRequest(req: Request): Future[String] = {
-    val url = "/api/" + req.path.mkString("/")
-    logln("Calling " + url)
-    dom.extensions.Ajax.post(
-      url = Shared.url + url,
-      data = upickle.write(req.args)
-    ).map(_.responseText)
-  }
+// shared API interface 
+trait MyApi{
+  def doThing(i: Int, s: String): Seq[String]
 }
-```
 
-As you can see, we're packaging up the path and data of the request and `POST`-ing it to some `/api/...` URL. On the server, this is backed by a Spray server which receives the `POST` request and shuttles it into the `route` function:
-
-```scala
-post {
-  path("api" / Segments){ s =>
-    extract(_.request.entity.asString) { e =>
-      complete {
-        autowire.Macros.route[Api](Server)(
-          autowire.Request(s, upickle.read[Map[String, String]](e))
-        )
-      }
-    }
-  }
+// server-side implementation, and router 
+object MyApiImpl extends MyApi{
+  def doThing(i: Int, s: String) = Seq.fill(i)(s)
 }
-```
-
-In this case, the public API of the web server is defined in the `shared/` project so as to be available to both the client and server code:
- 
-```scala
-trait Api{
-  def compile(txt: String): (String, Option[String])
-  def fastOpt(txt: String): (String, Option[String])
-  def fullOpt(txt: String): (String, Option[String])
-  def export(compiled: String, source: String): String
-  def `import`(compiled: String, source: String): String
-  def completeStuff(txt: String, flag: String, offset: Int): List[(String, String)]
-}
-```
-
-The server code implements these methods on the `Server` object, with the routes generated as shown above, and the client code can then use the `Post` object to directly "call" methods on the `Api` trait:
+object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
+  def write[Result: Writer](r: Result) = upickle.write(r)
+  def read[Result: Reader](p: String) = upickle.read[Result](p)
   
-```scala
-Post(_.fullOpt(editor.code))  
+  val routes = MyServer.route[MyApi](MyApiImpl)
+}
+
+// client-side implementation, and call-site
+object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+  def write[Result: Writer](r: Result) = upickle.write(r)
+  def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+  override def doCall(req: Request) = {
+    println(req)
+    MyServer.routes.apply(req)
+  }
+}
+
+MyClient[MyApi].doThing(3, "lol").call().foreach(println)
+// List(lol, lol, lol)
 ```
+
+In this example, we have a shared `MyApi` trait, which contains a trait/interface which is shared by both client and server. The server contains an implementation of this trait, while the client can make calls against the trait using the `route` macro provided by `MyServer`.
+
+Although in this example everything is happening locally, this example goes through the entire serialization/de-serialization process when transferring the arguments/return-value. Thus, it is trivial to replace the direct call to `MyServer.routes` to a remote call over HTTP or TCP or some other transport with `MyClient` and `MyServer`/`MyApiImpl` living on different machines or even running on different platforms (e.g. Scala-JS/Scala-JVM).
+
+Reference
+=========
+
+This section goes deeper into the steps necessary to use Autowire, and should cover extension points not obvious from the above example.
+
+To bein with, the developer has to implement two interfaces, `Client`:
+
+```scala
+trait Client[PickleType, Reader[_], Writer[_]] {
+  type Request = Core.Request[PickleType]
+  def read[Result: Reader](p: PickleType): Result
+  def write[Result: Writer](r: Result): PickleType
+  
+  /**
+   * A method for you to override, that actually performs the heavy
+   * lifting to transmit the marshalled function call from the [[Client]]
+   * all the way to the [[Core.Router]]
+   */
+  def doCall(req: Request): Future[PickleType]
+}
+```
+
+And `Server`
+
+```scala
+trait Server[PickleType, Reader[_], Writer[_]] {
+  type Request = Core.Request[PickleType]
+  type Router = Core.Router[PickleType]
+  
+  def read[Result: Reader](p: PickleType): Result
+  def write[Result: Writer](r: Result): PickleType
+
+  /**
+   * A method for you to override, that actually performs the heavy
+   * lifting to transmit the marshalled function call from the [[Client]]
+   * all the way to the [[Router]]
+   */
+  def route[Trait](target: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
+}
+```
+
+Both `Client` and `Server` are flexible: you get to specify multiple type parameters:
+
+- `PickleType`: or what type you want to serialize your arguments/return-value into. Typically something like `String`, `Array[Byte]`, `ByteString`, etc.
+- `Reader[_]`: a context-bound used to convert data from `PickleType` to a desired type `T`. Typically something like `upickle.Reader`, `play.api.libs.json.Reads`, etc.
+- `Writer[_]`: a context-bound used to convert data to `PickleType` from an original type `T`. Typically something like `upickle.Writer`, `play.api.libs.json.Writes`, etc.
+
+If the serialization library you're using doesn't need `Reader[_]` or `Writer[_]` context-bound, you can use `autowire.Bounds.None` as the context-bound, and it will be filled in automatically. You need to override the `read` and `write` methods of both sides, in order to tell Autowire how to serialize and deserialize your typed values.
+
+Lastly, you need to wire together client and server to get them talking to one another: this is done by overriding `Client.doCall`, which takes the `Request` object holding the serialized arguments and returns a `Future` containing the serialized response, and by using `Server.route`, which generates a `Router` `PartialFunction` which you can then feed `Request`
+ object into to receive a serialized response in return. These types are defined as
+ 
+```scala
+object Core {
+  /**
+   * The type returned by the [[Server.route]] macro; aliased for
+   * convenience, but it's really just a normal `PartialFunction`
+   * and can be combined/queried/treated like any other.
+   */
+  type Router[PickleType] = PartialFunction[Request[PickleType], Future[PickleType]]
+
+  /**
+   * A marshalled autowire'd function call.
+   *
+   * @param path A series of path segments which illustrate which method
+   *             to call, typically the fully qualified path of the
+   *             enclosing trait followed by the name of the method
+   * @param args Serialized arguments for the method that was called. Kept
+   *             as a Map of arg-name -> serialized value. Values which
+   *             exactly match the default value are omitted, and are
+   *             simply re-constituted by the receiver.
+   */
+  case class Request[PickleType](path: Seq[String], args: Map[String, PickleType])
+}
+```
+ 
+Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) is outside the scope of Autowire, as is how you serialize/deserialize the arguments/return-value using the `read` and `write` functions. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with unit tests to ensure that they are working.
+
+In short,
+
+- `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`.
+- `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. This should be pretty easy to send across any transport you choose.
 
 Why Autowire
 ============
@@ -141,11 +181,11 @@ Autowire aims to solve all these problems:
 - Ajax calls using Autowire are statically checked just like the rest of your program. For example, typos are immediately spotted by the compiler:
 
 ```scala
-Post(_.fastOp(editor.code))
+Client[Api].fastOp(editor.code).call()
 
 [error] /Client.scala:104: value fastOp is not a member of fiddle.Api
-[error]     Post(_.fastOp(editor.code))
-[error]            ^
+[error]     Client[Api].fastOp(editor.code).call()
+[error]                 ^
 ```
 
 - Similarly, since Autowire RPC calls are (at least superficially) just method calls, things like "find usages", IDE-renaming, and other such tools all work flawlessly across these calls.
@@ -167,24 +207,9 @@ val res: List[(String, String)] = {
 Limitations
 ===========
 
-Autowire naturally has some limitations, some fundamental, and some not:
-
-- It can only serialize and deserialize things that [uPickle](https://www.github.com/lihaoyi/upickle) can. By default that means most of the immutable data structures in the standard library, but case classes and such don't come by default, circular data structures aren't supported. This will improve slowly as uPickle improves.
-- It's hard-coded to use uPickle for serialization/de-serialization. This could change, but for now uPickle is the only serialization library that works across both Scala-JVM and Scala-JS
-- It's performance characteristics are unknown.
-- It's still a version 0.1.0 and likely to change in the near future. 
-
-Getting Started
-===============
-
-Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS respectively:
-
-```scala
-"com.lihaoyi" %% "autowire" % "0.1.4"
-"com.lihaoyi" %%% "autowire" % "0.1.4"
-```
-
-It's only available for Scala 2.11.x and Scala.js 0.5.3+
+Autowire can only serialize and deserialize things that the chosen serialization library can. For example, if you choose to go with uPickle, this means most of the immutable data structures in the standard library and case classes, but circular data structures aren't supported, and arbitrary object graphs don't work. 
+ 
+Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing.
 
 To see a simple example involving a ScalaJS client and Spray server, check out this example:
 

@@ -3,11 +3,11 @@ import acyclic.file
 import scala.concurrent.Future
 
 /**
- * A generic client-server implementation, which does everything locally but
- * nonetheless exercises the whole macro-based pickling/unpickling round trip.
- * Re-used for all the different implementations of pickling/unpickling, to
- * make sure it works for all of them
- */
+* A generic client-server implementation, which does everything locally but
+* nonetheless exercises the whole macro-based pickling/unpickling round trip.
+* Re-used for all the different implementations of pickling/unpickling, to
+* make sure it works for all of them
+*/
 abstract class GenericClientServerBundle[PickleType, Reader[_], Writer[_]]{ self =>
 
   def write[T: Writer](t: T) : PickleType
@@ -29,7 +29,7 @@ abstract class GenericClientServerBundle[PickleType, Reader[_], Writer[_]]{ self
     def read[T: Reader](t: PickleType) = self.read(t)
     case class NoSuchRoute(msg: String) extends Exception(msg)
 
-    def callRequest(r: Request) = {
+    def doCall(r: Request) = {
       Server.routes
         .lift(r)
         .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))

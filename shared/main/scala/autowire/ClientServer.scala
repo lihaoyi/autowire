@@ -25,7 +25,7 @@ trait Client[PickleType, Reader[_], Writer[_]] {
    * lifting to transmit the marshalled function call from the [[Client]]
    * all the way to the [[Core.Router]]
    */
-  def callRequest(req: Request): Future[PickleType]
+  def doCall(req: Request): Future[PickleType]
 
   def read[Result: Reader](p: PickleType): Result
   def write[Result: Writer](r: Result): PickleType

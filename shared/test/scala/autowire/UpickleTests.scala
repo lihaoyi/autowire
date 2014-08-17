@@ -1,11 +1,7 @@
 package autowire
 import utest._
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 import utest.ExecutionContext.RunNow
 import upickle._
-import scala.annotation.Annotation
-import utest.PlatformShims._
 import acyclic.file
 
 
@@ -18,8 +14,40 @@ object UpickleTests extends TestSuite{
   import Bundle.{Client, Server}
 
   import utest.PlatformShims.await
-  println(utest.*)
+
   val tests = TestSuite{
+    'example{
+      import upickle._
+
+      // shared API interface
+      trait MyApi{
+        def doThing(i: Int, s: String): Seq[String]
+      }
+
+      // server-side implementation, and router
+      object MyApiImpl extends MyApi{
+        def doThing(i: Int, s: String) = Seq.fill(i)(s)
+      }
+      object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+        val routes = MyServer.route[MyApi](MyApiImpl)
+      }
+
+      // client-side implementation, and call-site
+      object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+        override def doCall(req: Request) = {
+          println(req)
+          MyServer.routes.apply(req)
+        }
+      }
+
+      MyClient[MyApi].doThing(3, "lol").call().foreach(println)
+    }
     'basicCalls{
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())

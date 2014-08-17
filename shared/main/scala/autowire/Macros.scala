@@ -46,9 +46,10 @@ object Macros {
     // functions, pry it apart such that the main logic can operate on the
     // inner tree, and leave instructions on how
     val res = for {
-      q"autowire.this.`package`.$callableName[$t]($contents)" <- Win(c.prefix.tree,
+      q"$pkg.`package`.$callableName[$t]($contents)" <- Win(c.prefix.tree,
         "You can only .call() on the Proxy returned by autowire.Client.apply, not " + c.prefix.tree
       )
+      if Seq("autowire.this", "autowire").contains(pkg.toString)
       if Seq("clientFutureCallable", "clientCallable").contains(callableName.toString)
       (unwrapTree: Tree, methodName: TermName, args: Seq[Tree], prelude: Seq[Tree], deadNames: Seq[String]) = (contents: Tree) match{
         case x @ q"$thing.$call(..$args)" => (thing, call, args, Nil, Nil)
@@ -70,7 +71,10 @@ object Macros {
       q"autowire.this.`package`.unwrapClientProxy[$trt, $pt, $rb, $wb]($proxy)" <- Win(unwrapTree,
         s"XX You can't call the .call() method  on $contents, only on autowired function calls"
       )
-      path = trt.tpe.widen
+      path = trt.tpe
+                .widen
+                .typeSymbol
+                .fullName
                 .toString
                 .split('.')
                 .toSeq
@@ -86,10 +90,9 @@ object Macros {
         .map{case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write($t)"}
 
     } yield {
-      println(r)
       q"""{
         ..$prelude;
-        $proxy.self.callRequest(
+        $proxy.self.doCall(
           autowire.Core.Request(Seq(..$path), Map(..$pickled))
         ).map($proxy.self.read[${r}](_))
       }"""
@@ -136,23 +139,21 @@ object Macros {
           None
       }
       val argName = c.freshName[TermName]("args")
-      val args =
-        flatArgs.map{ case (arg, i) =>
-
-          hasDefault(arg, i) match{
-            case Some(defaultName) => q"""
-              $argName.get(${arg.name.toString})
-                      .fold($target.${TermName(defaultName)})( x =>
-                     try ${c.prefix}.read[${arg.typeSignature}](x)
-                     catch autowire.Internal.invalidHandler
-                   )
-            """
-            case None => q"""
-              try ${c.prefix}.read[${arg.typeSignature}]($argName(${arg.name.toString}))
-              catch autowire.Internal.invalidHandler
-            """
-          }
+      val args = flatArgs.map{ case (arg, i) =>
+        hasDefault(arg, i) match{
+          case Some(defaultName) => q"""
+            $argName.get(${arg.name.toString})
+                    .fold($target.${TermName(defaultName)})( x =>
+                   try ${c.prefix}.read[${arg.typeSignature}](x)
+                   catch autowire.Internal.invalidHandler
+                 )
+          """
+          case None => q"""
+            try ${c.prefix}.read[${arg.typeSignature}]($argName(${arg.name.toString}))
+            catch autowire.Internal.invalidHandler
+          """
         }
+      }
 
       val requiredArgs = flatArgs.collect{
         case (arg, i) if hasDefault(arg, i).isEmpty => arg.name.toString
@@ -169,6 +170,7 @@ object Macros {
     }
 
     val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
+//    println(res)
     c.Expr(res)
   }
 }
