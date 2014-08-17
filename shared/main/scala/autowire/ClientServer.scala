@@ -18,7 +18,7 @@ trait Client[PickleType, Reader[_], Writer[_]] {
    * @tparam Trait The interface that this autowire client makes its requests
    *               against.
    */
-  def apply[Trait] = ClientProxy[Trait, PickleType, Reader, Writer, this.type](this)
+  def apply[Trait] = ClientProxy[Trait, PickleType, Reader, Writer](this)
 
   /**
    * A method for you to override, that actually performs the heavy
@@ -39,9 +39,8 @@ trait Client[PickleType, Reader[_], Writer[_]] {
 case class ClientProxy[Trait,
                        PickleType,
                        Reader[_],
-                       Writer[_],
-                       ClientType <: Client[PickleType, Reader, Writer]]
-                      (self: ClientType)
+                       Writer[_]]
+                      (self: Client[PickleType, Reader, Writer])
 
 trait Server[PickleType, Reader[_], Writer[_]] {
   type Request = Core.Request[PickleType]

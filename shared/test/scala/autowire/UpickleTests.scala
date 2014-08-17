@@ -95,7 +95,10 @@ object UpickleTests extends TestSuite{
         'keysMissing {
           val badRequest = Core.Request[String](Seq("autowire", "Api", "multiply"), Map.empty)
           assert(Server.routes.isDefinedAt(badRequest))
-          intercept[InputError] {
+          val InputError(
+            "Missing Parameter: x",
+            null
+          ) = intercept[InputError] {
             Server.routes(badRequest)
           }
         }
@@ -106,6 +109,7 @@ object UpickleTests extends TestSuite{
           )
           assert(Server.routes.isDefinedAt(badRequest))
           val InputError(
+            "Invalid Input",
             upickle.Invalid.Data(upickle.Js.Arr(), "Number")
           ) = intercept[InputError] {
             Server.routes(badRequest)
@@ -118,6 +122,7 @@ object UpickleTests extends TestSuite{
           )
           assert(Server.routes.isDefinedAt(badRequest))
           val InputError(
+            "Invalid Input",
             upickle.Invalid.Json(_, _)
           ) = intercept[InputError] {
             Server.routes(badRequest)

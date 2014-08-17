@@ -30,7 +30,7 @@ package object autowire extends autowire.Internal.LowPri {
    * are immediately followed by a `.call()` call
    */
   @compileTimeOnly("unwrapClientProxy should not exist at runtime!")
-  implicit def unwrapClientProxy[Trait, PickleType, Reader[_], Writer[_], ClientType <: Client[PickleType, Reader, Writer]]
-                                (w: ClientProxy[Trait, PickleType, Reader, Writer, ClientType]): Trait = ???
+  implicit def unwrapClientProxy[Trait, PickleType, Reader[_], Writer[_]]
+                                (w: ClientProxy[Trait, PickleType, Reader, Writer]): Trait = ???
 }
 

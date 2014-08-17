@@ -67,7 +67,7 @@ object Macros {
           c.abort(x.pos, s"YY You can't call the .call() method on $x, only on autowired function calls")
       }
 
-      q"autowire.this.`package`.unwrapClientProxy[$trt, $pt, $rb, $wb, $clntTpe]($proxy)" <- Win(unwrapTree,
+      q"autowire.this.`package`.unwrapClientProxy[$trt, $pt, $rb, $wb]($proxy)" <- Win(unwrapTree,
         s"XX You can't call the .call() method  on $contents, only on autowired function calls"
       )
       path = trt.tpe.widen
@@ -140,7 +140,7 @@ object Macros {
           if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
             get(q"$singleton.${TermName(defaultName)}")
           else
-            get(q"throw new autowire.InputError(new Exception())")
+            get(q"""throw new autowire.InputError("Missing Parameter: " + ${arg.name.toString}, null)""")
         }
         .toList
 

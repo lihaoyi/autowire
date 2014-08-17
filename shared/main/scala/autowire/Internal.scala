@@ -30,6 +30,6 @@ object Internal{
   }
 
   val invalidHandler: PartialFunction[Throwable, Nothing] = {
-    case e => throw InputError(e)
+    case e => throw InputError("Invalid Input", e)
   }
 }

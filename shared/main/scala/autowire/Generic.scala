@@ -32,4 +32,4 @@ object Core {
  * raw input into structured data. The original exception is
  * preserved so you can see what happened.
  */
-case class InputError(ex: Throwable) extends Exception(ex)
+case class InputError(msg: String, ex: Throwable) extends Exception(msg, ex)
