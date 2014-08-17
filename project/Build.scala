@@ -11,7 +11,10 @@ object Build extends sbt.Build{
     version := "0.1.4",
     name := "autowire",
     scalaVersion := "2.11.2",
+    autoCompilerPlugins := true,
+    addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.2"),
     libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "acyclic" % "0.1.2" % "provided",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value
     ) ++ (
       if (scalaVersion.value startsWith "2.11.") Nil

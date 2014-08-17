@@ -5,8 +5,9 @@ import scala.reflect.macros.Context
 import language.experimental.macros
 import scala.annotation.Annotation
 import scala.collection.mutable
+import acyclic.file
 
-
+import Core._
 
 object Macros {
 
@@ -45,9 +46,10 @@ object Macros {
     // functions, pry it apart such that the main logic can operate on the
     // inner tree, and leave instructions on how
     val res = for {
-      q"autowire.this.`package`.Callable[$t]($contents)" <- Win(c.prefix.tree,
-        "You can only .call() on the Proxy returned by autowire.Client.apply"
+      q"autowire.this.`package`.$callableName[$t]($contents)" <- Win(c.prefix.tree,
+        "You can only .call() on the Proxy returned by autowire.Client.apply, not " + c.prefix.tree
       )
+      if Seq("clientFutureCallable", "clientCallable").contains(callableName.toString)
       (unwrapTree: Tree, methodName: TermName, args: Seq[Tree], prelude: Seq[Tree], deadNames: Seq[String]) = (contents: Tree) match{
         case x @ q"$thing.$call(..$args)" => (thing, call, args, Nil, Nil)
         case t @ q"..${statements: List[ValDef]}; $thing.$call(..$args)"
@@ -84,11 +86,12 @@ object Macros {
         .map{case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write($t)"}
 
     } yield {
+      println(r)
       q"""{
         ..$prelude;
         $proxy.self.callRequest(
-          autowire.Request(Seq(..$path), Map(..$pickled))
-        ).map($proxy.self.read[${method.returnType}](_))
+          autowire.Core.Request(Seq(..$path), Map(..$pickled))
+        ).map($proxy.self.read[${r}](_))
       }"""
     }
 
@@ -143,12 +146,12 @@ object Macros {
 
       val frag =
         cq"""
-          autowire.Request(Seq(..$path), args) =>
+          autowire.Core.Request(Seq(..$path), args) =>
           ${futurize(c)(q"$singleton.$member(..$args)", member)}.map(${c.prefix}.write(_))
         """
       frag
     }
-    val res = q"{case ..$routes}: autowire.Router[$pt]"
+    val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
     c.Expr(res)
   }
 }

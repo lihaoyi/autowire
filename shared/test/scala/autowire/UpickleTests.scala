@@ -6,7 +6,7 @@ import utest.ExecutionContext.RunNow
 import upickle._
 import scala.annotation.Annotation
 import utest.PlatformShims._
-
+import acyclic.file
 
 
 object UpickleTests extends TestSuite{
@@ -42,10 +42,10 @@ object UpickleTests extends TestSuite{
       val res = await(api.add(1, 2, 4).call())
       assert(res == "1+2+4")
     }
-//    'async{
-//      val res5 = await(uClient[Api].sloww(Seq("omgomg", "wtf")).call())
-//      assert(res5 == Seq(6, 3))
-//    }
+    'async{
+      val res5 = await(Client[Api].sloww(Seq("omgomg", "wtf")).call())
+      assert(res5 == Seq(6, 3))
+    }
     'compilationFailures{
       def check(error: CompileError, errorPos: String, msgs: String*) = {
         val stripped = errorPos.reverse.dropWhile("\n ".toSet.contains).reverse
@@ -85,7 +85,7 @@ object UpickleTests extends TestSuite{
     }
     'runtimeFailures{
       'noSuchRoute{
-        val badRequest = Request[String](Seq("omg", "wtf", "bbq"), Map.empty)
+        val badRequest = Core.Request[String](Seq("omg", "wtf", "bbq"), Map.empty)
         assert(!Server.routes.isDefinedAt(badRequest))
         intercept[MatchError] {
           Server.routes(badRequest)
@@ -93,14 +93,14 @@ object UpickleTests extends TestSuite{
       }
       'inputError{
         'keysMissing {
-          val badRequest = Request[String](Seq("autowire", "Api", "multiply"), Map.empty)
+          val badRequest = Core.Request[String](Seq("autowire", "Api", "multiply"), Map.empty)
           assert(Server.routes.isDefinedAt(badRequest))
           intercept[InputError] {
             Server.routes(badRequest)
           }
         }
         'keysInvalid{
-          val badRequest = Request(
+          val badRequest = Core.Request(
             Seq("autowire", "Api", "multiply"),
             Map("x" -> "[]", "ys" -> "[1, 2]")
           )
@@ -112,7 +112,7 @@ object UpickleTests extends TestSuite{
           }
         }
         'invalidJson{
-          val badRequest = Request(
+          val badRequest = Core.Request(
             Seq("autowire", "Api", "multiply"),
             Map("x" -> "[", "ys" -> "[1, 2]")
           )
