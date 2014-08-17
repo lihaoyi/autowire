@@ -2,21 +2,27 @@ package autowire
 
 import scala.concurrent.Future
 
-abstract class GenericClientServerBundle[PickleType, ReadBound[_], WriteBound[_]]{ self =>
+/**
+ * A generic client-server implementation, which does everything locally but
+ * nonetheless exercises the whole macro-based pickling/unpickling round trip.
+ * Re-used for all the different implementations of pickling/unpickling, to
+ * make sure it works for all of them
+ */
+abstract class GenericClientServerBundle[PickleType, Reader[_], Writer[_]]{ self =>
 
-  def write[T: WriteBound](t: T) : PickleType
-  def read[T: ReadBound](s: PickleType): T
+  def write[T: Writer](t: T) : PickleType
+  def read[T: Reader](s: PickleType): T
   def routes: Server.Router
 
-  object Server extends autowire.Server[PickleType, ReadBound, WriteBound] {
-    def write[T: WriteBound](t: T) = self.write(t)
-    def read[T: ReadBound](t: PickleType) = self.read(t)
+  object Server extends autowire.Server[PickleType, Reader, Writer] {
+    def write[T: Writer](t: T) = self.write(t)
+    def read[T: Reader](t: PickleType) = self.read(t)
     val routes = self.routes
   }
 
-  object Client extends autowire.Client[PickleType, ReadBound, WriteBound]{
-    def write[T: WriteBound](t: T) = self.write(t)
-    def read[T: ReadBound](t: PickleType) = self.read(t)
+  object Client extends autowire.Client[PickleType, Reader, Writer]{
+    def write[T: Writer](t: T) = self.write(t)
+    def read[T: Reader](t: PickleType) = self.read(t)
     case class NoSuchRoute(msg: String) extends Exception(msg)
 
     def callRequest(r: Request) = {

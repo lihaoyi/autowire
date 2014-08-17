@@ -86,5 +86,36 @@ object InteropTests extends TestSuite{
         res5 == "1.1*2.2*3.3*4.4"
       )
     }
+
+    'playJson{
+      import play.api.libs.json._
+
+      object Bundle extends GenericClientServerBundle[String, Reads, Writes]{
+
+        def write[T: Writes](t: T) = {
+          Json.stringify(Json.toJson(t))
+        }
+        def read[T: Reads](s: String): T = {
+          Json.fromJson[T](Json.parse(s)).get
+        }
+        def routes = Server.route[Api](Controller)
+      }
+      import Bundle.{Client, Server}
+
+      val res1 = await(Client[Api].add(1, 2, 3).call())
+      val res2 = await(Client[Api].add(1).call())
+      val res3 = await(Client[Api].add(1, 2).call())
+
+      val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
+      val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
+
+      assert(
+        res1 == "1+2+3",
+        res2 == "1+2+10",
+        res3 == "1+2+10",
+        res4 == "1.2*2.3",
+        res5 == "1.1*2.2*3.3*4.4"
+      )
+    }
   }
 }
