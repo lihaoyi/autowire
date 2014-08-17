@@ -132,7 +132,7 @@ Both `Client` and `Server` are flexible: you get to specify multiple type parame
 - `Reader[_]`: a context-bound used to convert data from `PickleType` to a desired type `T`. Typically something like `upickle.Reader`, `play.api.libs.json.Reads`, etc.
 - `Writer[_]`: a context-bound used to convert data to `PickleType` from an original type `T`. Typically something like `upickle.Writer`, `play.api.libs.json.Writes`, etc.
 
-If the serialization library you're using doesn't need `Reader[_]` or `Writer[_]` context-bound, you can use `autowire.Bounds.None` as the context-bound, and it will be filled in automatically. You need to override the `read` and `write` methods of both sides, in order to tell Autowire how to serialize and deserialize your typed values.
+If the serialization library you're using doesn't need `Reader[_]` or `Writer[_]` context-bound, you can use `autowire.Bounds.None` as the context-bound, and it will be filled in automatically. You then need to override the `read` and `write` methods of both sides, in order to tell Autowire how to serialize and deserialize your typed values.
 
 Lastly, you need to wire together client and server to get them talking to one another: this is done by overriding `Client.doCall`, which takes the `Request` object holding the serialized arguments and returns a `Future` containing the serialized response, and by using `Server.route`, which generates a `Router` `PartialFunction` which you can then feed `Request`
  object into to receive a serialized response in return. These types are defined as
@@ -165,7 +165,7 @@ object Core {
 
 In short,
 
-- `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with unit tests to ensure that they are working.
+- `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with [unit tests](blob/master/jvm/src/test/scala/autowire/InteropTests.scala) to ensure that they are working.
 - `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) and the response-data back is up to you as long as you can give Autowire a `Future[PickleType]` in exchange for its `Request`.  
 
 Why Autowire
