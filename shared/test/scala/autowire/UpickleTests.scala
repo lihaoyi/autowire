@@ -133,33 +133,33 @@ object UpickleTests extends TestSuite{
         'keysMissing {
           * - check(Map.empty){
             case Error.InvalidInput(
-              Error.MissingParam("x"),
-              Error.MissingParam("ys")
+              Error.Param.Missing("x"),
+              Error.Param.Missing("ys")
             ) =>
           }
           * - check(Map("x" -> "123")){
-            case Error.InvalidInput(Error.MissingParam("ys")) =>
+            case Error.InvalidInput(Error.Param.Missing("ys")) =>
           }
           * - check(Map("ys" -> "[123]")){
-            case Error.InvalidInput(Error.MissingParam("x")) =>
+            case Error.InvalidInput(Error.Param.Missing("x")) =>
           }
 
         }
         'keysInvalid - {
           * - check(Map("x" -> "[]", "ys" -> "234")) {
             case Error.InvalidInput(
-              upickle.Invalid.Data(Js.Arr(), _),
-              upickle.Invalid.Data(Js.Num(234), _)
+              Error.Param.Invalid("x", upickle.Invalid.Data(Js.Arr(), _)),
+              Error.Param.Invalid("ys", upickle.Invalid.Data(Js.Num(234), _))
             ) =>
           }
           * - check(Map("x" -> "123", "ys" -> "234")) {
             case Error.InvalidInput(
-              upickle.Invalid.Data(Js.Num(234), _)
+              Error.Param.Invalid("ys", upickle.Invalid.Data(Js.Num(234), _))
             ) =>
           }
           * - check(Map("x" -> "[]", "ys" -> "[234]")) {
             case Error.InvalidInput(
-              upickle.Invalid.Data(Js.Arr(), _)
+              Error.Param.Invalid("x", upickle.Invalid.Data(Js.Arr(), _))
             ) =>
           }
         }
@@ -167,18 +167,18 @@ object UpickleTests extends TestSuite{
         'invalidJson - {
           * - check(Map("x" -> "]", "ys" -> "2}34")) {
             case Error.InvalidInput(
-                upickle.Invalid.Json(_, "]"),
-                upickle.Invalid.Json(_, "2}34")
+              Error.Param.Invalid("x", upickle.Invalid.Json(_, "]")),
+              Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
             ) =>
           }
           * - check(Map("x" -> "1", "ys" -> "2}34")) {
             case Error.InvalidInput(
-              upickle.Invalid.Json(_, "2}34")
+              Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
             ) =>
           }
           * - check(Map("x" -> "]", "ys" -> "[234]")) {
             case Error.InvalidInput(
-              upickle.Invalid.Json(_, "]")
+              Error.Param.Invalid("x", upickle.Invalid.Json(_, "]"))
             ) =>
           }
         }
@@ -186,14 +186,14 @@ object UpickleTests extends TestSuite{
         'mix - {
           * - check(Map("x" -> "]")) {
             case Error.InvalidInput(
-              upickle.Invalid.Json(_, "]"),
-              Error.MissingParam("ys")
+              Error.Param.Invalid("x", upickle.Invalid.Json(_, "]")),
+              Error.Param.Missing("ys")
             ) =>
           }
           * - check(Map("x" -> "[1]", "ys" -> "2}34")) {
             case Error.InvalidInput(
-              upickle.Invalid.Data(Js.Arr(Js.Num(1)), _),
-              upickle.Invalid.Json(_, "2}34")
+              Error.Param.Invalid("x", upickle.Invalid.Data(Js.Arr(Js.Num(1)), _)),
+              Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
             ) =>
           }
 

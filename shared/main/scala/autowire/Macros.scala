@@ -70,11 +70,11 @@ object Macros {
 
           (rhs, call, args, liveStmts, deadStmts.map(_.name))
         case x =>
-          c.abort(x.pos, s"YY You can't call the .call() method on $x, only on autowired function calls")
+          c.abort(x.pos, s"You can't call the .call() method on $x, only on autowired function calls.")
       }
 
       q"${Pkg(_)}.`package`.unwrapClientProxy[$trt, $pt, $rb, $wb]($proxy)" <- Win(unwrapTree,
-        s"XX You can't call the .call() method  on $contents, only on autowired function calls"
+        s"XX You can't call the .call() method on $contents, only on autowired function calls"
       )
       path = trt.tpe
                 .widen
@@ -107,9 +107,7 @@ object Macros {
       case Win(tree, s) => c.Expr[Future[Result]](tree)
       case Luz(s) => c.abort(c.enclosingPosition, s)
     }
-
   }
-
 
   def routeMacro[Trait, PickleType]
                 (c: Context)
@@ -145,29 +143,27 @@ object Macros {
       }
       val argName = c.freshName[TermName]("args")
       val args: Seq[Tree] = flatArgs.zipWithIndex.map { case (arg, i) =>
-        hasDefault(arg, i) match {
-          case Some(defaultName) => q"""
-            $argName.get(${arg.name.toString})
-                    .fold($target.${TermName(defaultName)})( x =>
-                      ${c.prefix}.read[${arg.typeSignature}](x)
-                    )
-          """
-          case None => q"""
-            $argName.get(${arg.name.toString})
-                    .fold(throw autowire.Error.MissingParam(${arg.name.toString}))( x =>
-                      ${c.prefix}.read[${arg.typeSignature}](x)
-                    )
-          """
+        val default = hasDefault(arg, i) match {
+          case Some(defaultName) => q"scala.util.Right($target.${TermName(defaultName)})"
+          case None => q"scala.util.Left(autowire.Error.Param.Missing(${arg.name.toString}))"
         }
+        q"""
+          autowire.Internal.read[$pt, ${arg.typeSignature}](
+            $argName,
+            $default,
+            ${arg.name.toString},
+            ${c.prefix}.read[${arg.typeSignature}](_)
+          )
+        """
       }
 
-      val bindings = args.foldLeft[Tree](q"autowire.Internal.HNil[scala.util.Try]()") { (old, next) =>
-        q"autowire.Internal.#:(scala.util.Try($next), $old)"
+      val bindings = args.foldLeft[Tree](q"autowire.Internal.HNil[autowire.Internal.FailMaybe]()") { (old, next) =>
+        q"autowire.Internal.#:($next, $old)"
       }
 
       val nameNames: Seq[TermName] = flatArgs.map(x => x.name.toTermName)
       val assignment = flatArgs.foldLeft[Tree](q"autowire.Internal.HNil()") { (old, next) =>
-        pq"autowire.Internal.#:(Some(${next.name.toTermName}: ${next.typeSignature}), $old)"
+        pq"autowire.Internal.#:(${next.name.toTermName}: ${next.typeSignature}, $old)"
       }
 
       val requiredArgs = flatArgs.zipWithIndex.collect {
@@ -181,15 +177,12 @@ object Macros {
           case Right(..$assignment) =>
             ${futurize(c)(q"$target.$member(..$nameNames)", member)}.map(${c.prefix}.write(_))
         }
-
       """
-
 
       frag
     }
 
     val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
-    println(res)
     c.Expr(res)
   }
 }

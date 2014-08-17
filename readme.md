@@ -172,6 +172,46 @@ In short,
 
 If you still don't fully understand, and need help getting something working, take a look at the [complete example](https://github.com/lihaoyi/workbench-example-app/tree/autowire).  
 
+Error Handling
+==============
+
+Assuming that your chosen serialization library behaves as intended, Autowire only throws exceptions when de-serializing data. This could come from many sources: data corrupted in transit, external API users making mistakes, malicious users trying to pen-test your API.
+
+Autowire's de-serialization behavior is documented in the errors it throws:
+
+```scala
+package autowire
+
+trait Error extends Exception
+object Error{
+  /**
+   * Signifies that something went wrong when de-serializing the
+   * raw input into structured data.
+   *
+   * This can contain multiple exceptions, one for each parameter.
+   */
+  case class InvalidInput(exs: Param*) extends Exception with Error
+  sealed trait Param
+  object Param{
+
+    /**
+     * Some parameter was missing from the input.
+     */
+    case class Missing(param: String) extends Param
+
+    /**
+     * Something went wrong trying to de-serialize the input parameter;
+     * the thrown exception is stored in [[ex]]
+     */
+    case class Invalid(param: String, ex: Throwable) extends Param
+  }
+}
+```
+
+These errors are not intended to be end-user-facing. Rather, as far as possible they are maintained as structured data, and it us up to the developer using Autowire to decide how to respond (error page, logging, etc).
+
+Autowire only provides custom error handling on the server side, since there are multiple arguments to validate/aggregate. If something goes wrong on the client during de-serialization, you will get the exception thrown from whichever serialization library you're using.
+
 Why Autowire
 ============
 
@@ -194,7 +234,7 @@ Client[Api].fastOp(editor.code).call()
 [error]                 ^
 ```
 
-- Similarly, since Autowire RPC calls are (at least superficially) just method calls, things like "find usages", IDE-renaming, and other such tools all work flawlessly across these calls.
+- Similarly, since Autowire RPC calls are (at least superficially) just method calls, things like find-usages, rename-all, and other such tools all work flawlessly across these calls.
 
 - Autowire deals directly with `Future`s; this means that it plays nicely with the rest of the Scala ecosystem, including tools such as `async` and `await`, while making it much easier for future developers to reason about than callback soup.  
 
@@ -208,14 +248,14 @@ val res: List[(String, String)] = {
 }
 ```
 
-- Also shown in the example above, serialization and deserialization of data structures is handled implicitly by uPickle. Thus you can call functions which return non-trivial structures and receive the structured data directly, without having to fiddle with JSON or other ad-hoc encodings yourself. 
+- Also shown in the example above, serialization and deserialization of data structures is handled implicitly. Thus you can call functions which return non-trivial structures and receive the structured data directly, without having to fiddle with JSON or other ad-hoc encodings yourself. 
 
 Limitations
 ===========
 
 Autowire can only serialize and deserialize things that the chosen serialization library can. For example, if you choose to go with uPickle, this means most of the immutable data structures in the standard library and case classes, but circular data structures aren't supported, and arbitrary object graphs don't work. 
  
-Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing.
+Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing. It is up to the developer using Autowire to decide how he wants to transport the serialized data back and forth, how he wants to respond to errors, etc.
 
 To see a simple example involving a ScalaJS client and Spray server, check out this example:
 

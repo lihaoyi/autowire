@@ -29,6 +29,10 @@ object Internal{
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
 
+  /**
+   * A very small HList, with the members forced to be wrapped in some
+   * higher-kinded [[Wrapper]] so we can easily do transformations on them.
+   */
   sealed trait HList[Wrapper[+_]]{
     def #:[H](h : Wrapper[H]) = Internal.#:(h, this)
   }
@@ -37,20 +41,27 @@ object Internal{
     override def toString = head+" #: "+tail.toString
   }
   case class HNil[Wrapper[+_]]() extends HList[Wrapper]
-
-
-  def validate(current: HList[util.Try]): Either[List[Throwable], HList[Some]] = current match {
+  type Identity[+T] = T
+  type FailMaybe[+T] = Either[Error.Param, T]
+  type FailAll[+T] = Either[List[Error.Param], T]
+  def validate(current: HList[FailMaybe]): FailAll[HList[Identity]] = current match {
     case #:(first, rest) =>
-      val x = (first, validate(rest)) match {
-        case (util.Success(_), Left(errors)) => Left(errors)
-        case (util.Success(success), Right(successes)) => Right(Some(success) #: successes)
-        case (util.Failure(error), Left(errors)) => Left(error :: errors)
-        case (util.Failure(error), Right(successes)) => Left(error :: Nil)
+      (first, validate(rest)) match {
+        case (Right(_), Left(errors)) => Left(errors)
+        case (Right(success), Right(successes)) => Right(success #: successes)
+        case (Left(error), Left(errors)) => Left(error :: errors)
+        case (Left(error), Right(successes)) => Left(error :: Nil)
       }
-      println("VALIDATED " + x)
-      x
     case HNil() =>
-      println("VALIDATED " + HNil)
-      Right(HNil[Some]())
+      Right(HNil[Identity]())
+  }
+
+  def read[P, T](dict: Map[String, P], default: => FailMaybe[T], name: String, thunk: P => T): FailMaybe[T] = {
+    dict.get(name).fold[Either[autowire.Error.Param, T]](default)( x =>
+      util.Try(thunk(x)) match {
+        case scala.util.Success(value) => Right(value)
+        case scala.util.Failure(error) => Left(autowire.Error.Param.Invalid(name, error))
+      }
+    )
   }
 }

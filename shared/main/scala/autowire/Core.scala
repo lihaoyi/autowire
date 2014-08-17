@@ -2,9 +2,7 @@ package autowire
 
 import scala.concurrent.Future
 import acyclic.file
-/**
- * Created by haoyi on 8/16/14.
- */
+
 object Core {
   /**
    * The type returned by the [[Server.route]] macro; aliased for
@@ -31,13 +29,25 @@ trait Error extends Exception
 object Error{
   /**
    * Signifies that something went wrong when de-serializing the
-   * raw input into structured data. The original exception is
-   * preserved so you can see what happened.
+   * raw input into structured data.
+   *
+   * This can contain multiple exceptions, one for each parameter.
    */
-  case class InvalidInput(exs: Throwable*) extends Exception(
-    "(" + exs.map(_.toString).mkString(",") + ")", exs(0)
-  ) with Error
-  case class MissingParam(param: String) extends Exception(param) with Error
+  case class InvalidInput(exs: Param*) extends Exception with Error
+  sealed trait Param
+  object Param{
+
+    /**
+     * Some parameter was missing from the input.
+     */
+    case class Missing(param: String) extends Param
+
+    /**
+     * Something went wrong trying to de-serialize the input parameter;
+     * the thrown exception is stored in [[ex]]
+     */
+    case class Invalid(param: String, ex: Throwable) extends Param
+  }
 }
 
 
