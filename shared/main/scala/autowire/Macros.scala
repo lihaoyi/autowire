@@ -65,15 +65,11 @@ object Macros {
 
           (rhs, call, args, liveStmts, deadStmts.map(_.name))
         case x =>
-          println("WHAT'S THIS")
-          println(x)
-          ???
+          c.abort(x.pos, s"You can't call the .call() method on $x, only on autowired function calls")
       }
 
-      _ = println("INNER " + methodName)
-
       q"autowire.this.`package`.unwrapClientProxy[$trt, $rdr, $wtr]($proxy)" <- Win(unwrapTree,
-        "boo what's this? " + unwrapTree
+        s"You can't call the .call() method on $contents, only on autowired function calls"
       )
       path = trt.tpe.widen
                 .toString

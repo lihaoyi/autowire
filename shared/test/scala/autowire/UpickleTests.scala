@@ -54,14 +54,34 @@ object UpickleTests extends TestSuite{
 //      val res5 = await(uClient[Api].sloww(Seq("omgomg", "wtf")).call())
 //      assert(res5 == Seq(6, 3))
 //    }
-//    'compilationFailures{
-//      'notSimpleCallFails{
-////        await(Client(x => 1 + "omg" + 1 + ""))
-////        * - compileError { """Client(x => 1 + 1 + "")""" }
-////        * - compileError { """Client(x => 1)""" }
-////        * - compileError { """Client(x => Thread.sleep(lols))""" }
-//      }
-//    }
+    'compilationFailures{
+      def check(error: CompileError, errorPos: String, msgs: String*) = {
+        val stripped = errorPos.reverse.dropWhile("\n ".toSet.contains).reverse
+        val pos = "\n" + error.pos
+        assert(pos == stripped)
+        for(msg <- msgs){
+          assert(error.msg.contains(msg))
+        }
+      }
+      * - check(
+        compileError("123.call()"),
+        """
+        compileError("123.call()"),
+                      ^
+        """,
+        "You can't call the .call() method on 123"
+      )
+
+      * - check(
+        compileError("uClient[Api].add(1, 2, 3).toString.call()"),
+        """
+        compileError("uClient[Api].add(1, 2, 3).toString.call()"),
+                                                             ^
+        """,
+        "You can't call the .call() method",
+        "add(1, 2, 3).toString()"
+      )
+    }
     'runtimeFailures{
       'noSuchRoute{
         val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)

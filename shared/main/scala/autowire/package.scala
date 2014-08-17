@@ -44,7 +44,7 @@ package object autowire {
    */
   case class Request(path: Seq[String], args: Map[String, String])
   implicit class Callable[T](t: T){
-    def call() = macro Macros.clientMacro[T]
+    def call(): Future[T] = macro Macros.clientMacro[T]
   }
   case class ClientProxy[Trait, Reader[_], Writer[_]](self: Client[Reader, Writer])
 
