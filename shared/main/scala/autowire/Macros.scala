@@ -42,15 +42,20 @@ object Macros {
                  (implicit r: c.WeakTypeTag[Result])
                  : c.Expr[Future[Result]] = {
     import c.universe._
-    // If the tree is one of those default-argument containing blocks or
-    // functions, pry it apart such that the main logic can operate on the
-    // inner tree, and leave instructions on how
+    object Pkg{
+      def unapply(t: Tree): Option[Tree] = {
+        if (Seq("autowire.this", "autowire").contains(t.toString)) Some(t)
+        else None
+      }
+    }
     val res = for {
-      q"$pkg.`package`.$callableName[$t]($contents)" <- Win(c.prefix.tree,
+      q"${Pkg(_)}.`package`.$callableName[$t]($contents)" <- Win(c.prefix.tree,
         "You can only .call() on the Proxy returned by autowire.Client.apply, not " + c.prefix.tree
       )
-      if Seq("autowire.this", "autowire").contains(pkg.toString)
       if Seq("clientFutureCallable", "clientCallable").contains(callableName.toString)
+      // If the tree is one of those default-argument containing blocks or
+      // functions, pry it apart such that the main logic can operate on the
+      // inner tree, and leave instructions on how
       (unwrapTree: Tree, methodName: TermName, args: Seq[Tree], prelude: Seq[Tree], deadNames: Seq[String]) = (contents: Tree) match{
         case x @ q"$thing.$call(..$args)" => (thing, call, args, Nil, Nil)
         case t @ q"..${statements: List[ValDef]}; $thing.$call(..$args)"
@@ -68,10 +73,9 @@ object Macros {
           c.abort(x.pos, s"YY You can't call the .call() method on $x, only on autowired function calls")
       }
 
-      q"$pkg.`package`.unwrapClientProxy[$trt, $pt, $rb, $wb]($proxy)" <- Win(unwrapTree,
+      q"${Pkg(_)}.`package`.unwrapClientProxy[$trt, $pt, $rb, $wb]($proxy)" <- Win(unwrapTree,
         s"XX You can't call the .call() method  on $contents, only on autowired function calls"
       )
-    if Seq("autowire.this", "autowire").contains(pkg.toString)
       path = trt.tpe
                 .widen
                 .typeSymbol

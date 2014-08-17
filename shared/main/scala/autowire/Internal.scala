@@ -37,4 +37,25 @@ object Internal{
     if (!missing.isEmpty)
       throw new autowire.Error.MissingParams(missing)
   }
+  sealed trait HList{
+    def ::[H](h : H) = Internal.H.::(h, this)
+  }
+
+  object H{
+    final case class ::[+H, +T <: HList](head : H, tail : T) extends HList {
+      override def toString = head+" :: "+tail.toString
+    }
+    case object Nil extends HList
+  }
+
+  def validate[T <: HList](current: T): Either[List[Throwable], T] = current match {
+    case H.::(first, rest) =>
+      (first, validate(rest)) match {
+        case (util.Success(_), Left(errors)) => Left(errors)
+        case (util.Success(success), Right(successes)) => Right((success :: successes).asInstanceOf[T])
+        case (util.Failure(error), Left(errors)) => Left(error :: errors)
+        case (util.Failure(error), Right(successes)) => Left(error :: Nil)
+      }
+    case H.Nil => Right(H.Nil.asInstanceOf[T])
+  }
 }
