@@ -45,13 +45,13 @@ object UpickleTests extends TestSuite{
         res5 == "1.1*2.2*3.3*4.4"
       )
     }
-//    'aliased{
-//      val api = UpickleClient
-//      val res = await(api(_.add(1, 2, 4)))
-//      assert(res == "1+2+4")
-//    }
+    'aliased{
+      val api = uClient[Api]
+      val res = await(api.add(1, 2, 4).call())
+      assert(res == "1+2+4")
+    }
 //    'async{
-//      val res5 = await(UpickleClient(_.sloww(Seq("omgomg", "wtf"))))
+//      val res5 = await(uClient[Api].sloww(Seq("omgomg", "wtf")).call())
 //      assert(res5 == Seq(6, 3))
 //    }
 //    'compilationFailures{
@@ -62,47 +62,47 @@ object UpickleTests extends TestSuite{
 ////        * - compileError { """Client(x => Thread.sleep(lols))""" }
 //      }
 //    }
-//    'runtimeFailures{
-//      'noSuchRoute{
-//        val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
-//        assert(!UpickleServer.routes.isDefinedAt(badRequest))
-//        intercept[MatchError] {
-//          UpickleServer.routes(badRequest)
-//        }
-//      }
-//      'inputError{
-//        'keysMissing {
-//          val badRequest = Request(Seq("autowire", "Api", "multiply"), Map.empty)
-//          assert(UpickleServer.routes.isDefinedAt(badRequest))
-//          intercept[InputError] {
-//            UpickleServer.routes(badRequest)
-//          }
-//        }
-//        'keysInvalid{
-//          val badRequest = Request(
-//            Seq("autowire", "Api", "multiply"),
-//            Map("x" -> "[]", "ys" -> "[1, 2]")
-//          )
-//          assert(UpickleServer.routes.isDefinedAt(badRequest))
-//          val InputError(
-//            upickle.Invalid.Data(upickle.Js.Arr(), "Number")
-//          ) = intercept[InputError] {
-//            UpickleServer.routes(badRequest)
-//          }
-//        }
-//        'invalidJson{
-//          val badRequest = Request(
-//            Seq("autowire", "Api", "multiply"),
-//            Map("x" -> "[", "ys" -> "[1, 2]")
-//          )
-//          assert(UpickleServer.routes.isDefinedAt(badRequest))
-//          val InputError(
-//            upickle.Invalid.Json(_, _)
-//          ) = intercept[InputError] {
-//            UpickleServer.routes(badRequest)
-//          }
-//        }
-//      }
-//    }
+    'runtimeFailures{
+      'noSuchRoute{
+        val badRequest = Request(Seq("omg", "wtf", "bbq"), Map.empty)
+        assert(!uServer.routes.isDefinedAt(badRequest))
+        intercept[MatchError] {
+          uServer.routes(badRequest)
+        }
+      }
+      'inputError{
+        'keysMissing {
+          val badRequest = Request(Seq("autowire", "Api", "multiply"), Map.empty)
+          assert(uServer.routes.isDefinedAt(badRequest))
+          intercept[InputError] {
+            uServer.routes(badRequest)
+          }
+        }
+        'keysInvalid{
+          val badRequest = Request(
+            Seq("autowire", "Api", "multiply"),
+            Map("x" -> "[]", "ys" -> "[1, 2]")
+          )
+          assert(uServer.routes.isDefinedAt(badRequest))
+          val InputError(
+            upickle.Invalid.Data(upickle.Js.Arr(), "Number")
+          ) = intercept[InputError] {
+            uServer.routes(badRequest)
+          }
+        }
+        'invalidJson{
+          val badRequest = Request(
+            Seq("autowire", "Api", "multiply"),
+            Map("x" -> "[", "ys" -> "[1, 2]")
+          )
+          assert(uServer.routes.isDefinedAt(badRequest))
+          val InputError(
+            upickle.Invalid.Json(_, _)
+          ) = intercept[InputError] {
+            uServer.routes(badRequest)
+          }
+        }
+      }
+    }
   }
 }

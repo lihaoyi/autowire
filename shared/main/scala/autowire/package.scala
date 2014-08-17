@@ -55,15 +55,16 @@ package object autowire {
    * A single client can only make calls to one interface, but it's not a 
    * huge deal. Just make a few clients (they can all inherit/delegate the 
    * `callRequest` method) if you want multiple targets.
-   * 
-   * @tparam Trait The interface that this autowire client makes its requests
-   *               against.
+   *
    * @tparam Reader An implicit typeclass needed to de-serialize values
    * @tparam Writer An implicit typeclass needed to serialize values
    */
   trait Client[Reader[_], Writer[_]]{
     /**
      * Actually makes a request
+     *
+     * @tparam Trait The interface that this autowire client makes its requests
+     *               against.
      */
     def apply[Trait]: ClientProxy[Trait, Reader, Writer] = ClientProxy(this)
 
