@@ -3,10 +3,18 @@ import scala.concurrent.Future
 import language.experimental.macros
 
 package object autowire {
-  case class InputError(ex: Throwable) extends Exception(
-    "There was a failure de-serializing input", ex
-  )
 
+  /**
+   * Signifies that something went wrong when de-serializing the
+   * raw input into structured data. The original exception is
+   * preserved so you can see what happened.
+   */
+  case class InputError(ex: Throwable) extends Exception(ex)
+
+  /**
+   * Holds a bunch of implementation details, which need to be public
+   * for various reasons, but really shouldn't be used directly.
+   */
   object Internal{
     val invalidHandler: PartialFunction[Throwable, Nothing] = {
       case e => throw InputError(e)
@@ -16,12 +24,33 @@ package object autowire {
       implicit def future[Result: Reader, Reader[_]] = new Wrapper[Future[Result], Result, Reader]
       implicit def normal[Result: Reader, Reader[_]] = new Wrapper[Result, Result, Reader]
     }
+    trait ReadWrite[PickleType, Reader[_], Writer[_]]{
+      def read[Result: Reader](p: PickleType): Result
+      def write[Result: Writer](r: Result): PickleType
+    }
   }
+
+  /**
+   * Utility classes to fit 0 or 2 context bounds into 1
+   */
   object Bounds{
+    /**
+     * Type representing two contexts bounds, in order to squeeze them into
+     * one. Can be used as a context bound via `: Bounds.Two[TypeA, TypeB]`
+     * and the implicits inside extracted via
+     * `implicit (t1, t2) = Bounds.Two()`
+     */
     class Two[T, T1[_], T2[_]]()(implicit val t1: T1[T], val t2: T2[T])
     object Two{
       implicit def twoBounds[T, T1[_], T2[_]](implicit t1: T1[T], t2: T2[T]) = new Two()(t1, t2)
+
+      def apply[T, T1[_], T2[_]]()(implicit two: Two[T, T1, T2]) = (two.t1, two.t2)
     }
+
+    /**
+     * Type representing the lack-of a context-bound. Can be used as a
+     * context bound via `: Bounds.None` an will always be satisfied.
+     */
     class None[T]
     object None{
       implicit def noBound[T] = new None[T]
@@ -55,25 +84,37 @@ package object autowire {
    *             simply re-constituted by the receiver.
    */
   case class Request[PickleType](path: Seq[String], args: Map[String, PickleType])
+
+  /**
+   * Provides the `.call()` syntax, that is used to mark a "remote"
+   * method-call and turn it into a real RPC.
+   */
   implicit class Callable[T](t: T){
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
+
+  /**
+   * Proxy type that you can call methods from `Trait` on, which (when
+   * followed by a `.call()` call) will turn into an RPC using the original
+   * [[Client]]
+   */
   case class ClientProxy[Trait, PickleType, Reader[_], Writer[_], ClientType <: Client[PickleType, Reader, Writer]](self: ClientType)
 
+  /**
+   * Helper implicit to make sure that any calls to methods on [[ClientProxy]]
+   * are immediately followed by a `.call()` call
+   */
   @compileTimeOnly("unwrapClientProxy should not exist at runtime!")
-  implicit def unwrapClientProxy[Trait, PickleType, Reader[_], Writer[_], ClientType <: Client[PickleType, Reader, Writer]](w: ClientProxy[Trait, PickleType, Reader, Writer, ClientType]): Trait = ???
+  implicit def unwrapClientProxy[Trait, PickleType, Reader[_], Writer[_], ClientType <: Client[PickleType, Reader, Writer]]
+                                (w: ClientProxy[Trait, PickleType, Reader, Writer, ClientType]): Trait = ???
 
-  trait ReadWrite[PickleType, Reader[_], Writer[_]]{
-    def read[Result: Reader](p: PickleType): Result
-    def write[Result: Writer](r: Result): PickleType
-  }
   /**
    * A client to make autowire'd function calls to a particular interface. 
    * A single client can only make calls to one interface, but it's not a 
    * huge deal. Just make a few clients (they can all inherit/delegate the 
    * `callRequest` method) if you want multiple targets.
    */
-  trait Client[PickleType, Reader[_], Writer[_]] extends ReadWrite[PickleType, Reader, Writer]{
+  trait Client[PickleType, Reader[_], Writer[_]] extends Internal.ReadWrite[PickleType, Reader, Writer]{
     type Request = autowire.Request[PickleType]
     /**
      * Actually makes a request
@@ -91,7 +132,7 @@ package object autowire {
     def callRequest(req: Request): Future[PickleType]
   }
 
-  trait Server[PickleType, Reader[_], Writer[_]] extends ReadWrite[PickleType, Reader, Writer]{
+  trait Server[PickleType, Reader[_], Writer[_]] extends Internal.ReadWrite[PickleType, Reader, Writer]{
     type Request = autowire.Request[PickleType]
     type Router = autowire.Router[PickleType]
     /**
