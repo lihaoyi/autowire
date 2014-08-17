@@ -59,6 +59,7 @@ package object autowire {
    * `callRequest` method) if you want multiple targets.
    */
   trait Client[PickleType]{
+    type Request = autowire.Request[PickleType]
     /**
      * Actually makes a request
      *
@@ -72,10 +73,11 @@ package object autowire {
      * lifting to transmit the marshalled function call from the [[Client]]
      * all the way to the [[Router]]
      */
-    def callRequest(req: Request[PickleType]): Future[PickleType]
+    def callRequest(req: Request): Future[PickleType]
   }
 
   trait Server[PickleType]{
+    type Request = autowire.Request[PickleType]
 
     /**
      * A method for you to override, that actually performs the heavy

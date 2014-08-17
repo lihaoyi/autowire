@@ -40,7 +40,7 @@ object InteropTests extends TestSuite{
 
       object Client extends autowire.Client[Array[Byte]] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request[Array[Byte]]) = {
+        def callRequest(r: Request) = {
           Server.routes
             .lift(r)
             .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
@@ -86,7 +86,7 @@ object InteropTests extends TestSuite{
 
       object Client extends autowire.Client[Array[Byte]] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request[Array[Byte]]) = {
+        def callRequest(r: Request) = {
           Server.routes
             .lift(r)
             .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
@@ -124,7 +124,7 @@ object InteropTests extends TestSuite{
 
       object Client extends autowire.Client[String] with Rw{
         case class NoSuchRoute(msg: String) extends Exception(msg)
-        def callRequest(r: Request[String]) = {
+        def callRequest(r: Request) = {
           Server.routes
                 .lift(r)
                 .getOrElse(Future.failed(new NoSuchRoute("No route found : " + r.path)))
