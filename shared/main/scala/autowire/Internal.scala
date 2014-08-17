@@ -29,11 +29,6 @@ object Internal{
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
 
-  def checkKeys(keySet: Set[String], requiredArgs: Array[String]) = {
-    val missing = requiredArgs.filterNot(keySet.contains)
-    if (!missing.isEmpty)
-      throw new autowire.Error.MissingParams(missing)
-  }
   sealed trait HList[Wrapper[+_]]{
     def #:[H](h : Wrapper[H]) = Internal.#:(h, this)
   }

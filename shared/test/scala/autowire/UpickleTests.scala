@@ -131,12 +131,19 @@ object UpickleTests extends TestSuite{
         }
 
         'keysMissing {
-          def checkMissing(input: Map[String, String], expectedMissing: Seq[String]) = {
-            check(input){case Error.MissingParams(`expectedMissing`) =>}
+          * - check(Map.empty){
+            case Error.InvalidInput(
+              Error.MissingParam("x"),
+              Error.MissingParam("ys")
+            ) =>
           }
-          * - checkMissing(Map.empty, Seq("x", "ys"))
-          * - checkMissing(Map("x" -> "123"), Seq("ys"))
-          * - checkMissing(Map("ys" -> "[123]"), Seq("x"))
+          * - check(Map("x" -> "123")){
+            case Error.InvalidInput(Error.MissingParam("ys")) =>
+          }
+          * - check(Map("ys" -> "[123]")){
+            case Error.InvalidInput(Error.MissingParam("x")) =>
+          }
+
         }
         'keysInvalid - {
           * - check(Map("x" -> "[]", "ys" -> "234")) {
@@ -174,6 +181,22 @@ object UpickleTests extends TestSuite{
               upickle.Invalid.Json(_, "]")
             ) =>
           }
+        }
+
+        'mix - {
+          * - check(Map("x" -> "]")) {
+            case Error.InvalidInput(
+              upickle.Invalid.Json(_, "]"),
+              Error.MissingParam("ys")
+            ) =>
+          }
+          * - check(Map("x" -> "[1]", "ys" -> "2}34")) {
+            case Error.InvalidInput(
+              upickle.Invalid.Data(Js.Arr(Js.Num(1)), _),
+              upickle.Invalid.Json(_, "2}34")
+            ) =>
+          }
+
         }
       }
     }

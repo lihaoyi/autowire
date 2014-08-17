@@ -153,7 +153,10 @@ object Macros {
                     )
           """
           case None => q"""
-            ${c.prefix}.read[${arg.typeSignature}]($argName(${arg.name.toString}))
+            $argName.get(${arg.name.toString})
+                    .fold(throw autowire.Error.MissingParam(${arg.name.toString}))( x =>
+                      ${c.prefix}.read[${arg.typeSignature}](x)
+                    )
           """
         }
       }
@@ -172,10 +175,6 @@ object Macros {
       }
 
       val frag = cq""" autowire.Core.Request(Seq(..$path), $argName) =>
-        autowire.Internal.checkKeys(
-          $argName.keySet,
-          Array(..$requiredArgs)
-        )
         autowire.Internal.validate($bindings) match{
           case Left(failures) =>
             throw autowire.Error.InvalidInput(failures.reverse:_*)
