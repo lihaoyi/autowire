@@ -126,31 +126,52 @@ object Macros {
       if !member.isSynthetic
     } yield {
       val path = apiClass.typeSymbol.fullName.toString.split('.').toSeq :+ member.name.toString
+      val flatArgs =
+        member.typeSignature
+              .paramLists
+              .flatten
+              .zipWithIndex
 
-      val args = member
-        .typeSignature
-        .paramLists
-        .flatten
-        .zipWithIndex
-        .map{ case (arg, i) =>
-          val defaultName = s"${member.name}$$default$$${i+1}"
-          def get(t: Tree) = q"""
-            args.get(${arg.name.toString}).fold($t)(x => try ${c.prefix}.read[${arg.typeSignature}](x) catch autowire.Internal.invalidHandler)
-          """
-          if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
-            get(q"$singleton.${TermName(defaultName)}")
-          else
-            get(q"""throw new autowire.InputError("Missing Parameter: " + ${arg.name.toString}, null)""")
+      def hasDefault(arg: Symbol, i: Int) = {
+        val defaultName = s"${member.name}$$default$$${i+1}"
+        if (tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
+          Some(defaultName)
+        else
+          None
+      }
+
+      val args =
+        flatArgs.map{ case (arg, i) =>
+
+          hasDefault(arg, i) match{
+            case Some(defaultName) => q"""
+              args.get(${arg.name.toString})
+                  .fold($singleton.${TermName(defaultName)})( x =>
+                     try ${c.prefix}.read[${arg.typeSignature}](x)
+                     catch autowire.Internal.invalidHandler
+                   )
+            """
+            case None => q"""
+              try ${c.prefix}.read[${arg.typeSignature}](args(${arg.name.toString}))
+              catch autowire.Internal.invalidHandler
+            """
+          }
         }
-        .toList
 
-      val frag =
-        cq"""
-          autowire.Core.Request(Seq(..$path), args) =>
-          ${futurize(c)(q"$singleton.$member(..$args)", member)}.map(${c.prefix}.write(_))
-        """
+      val requiredArgs = flatArgs.collect{
+        case (arg, i) if hasDefault(arg, i).isEmpty => arg.name.toString
+      }
+
+      val frag = cq""" autowire.Core.Request(Seq(..$path), args) =>
+        val keySet = args.keySet
+        val missing = Array(..$requiredArgs).filterNot(keySet.contains)
+        if (!missing.isEmpty)
+          throw new autowire.Error.MissingParams(missing)
+        ${futurize(c)(q"$singleton.$member(..$args)", member)}.map(${c.prefix}.write(_))
+      """
       frag
     }
+
     val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
     c.Expr(res)
   }

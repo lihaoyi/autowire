@@ -93,27 +93,32 @@ object UpickleTests extends TestSuite{
       }
       'inputError{
         'keysMissing {
-          val badRequest = Core.Request[String](Seq("autowire", "Api", "multiply"), Map.empty)
-          assert(Server.routes.isDefinedAt(badRequest))
-          val InputError(
-            "Missing Parameter: x",
-            null
-          ) = intercept[InputError] {
-            Server.routes(badRequest)
+          def check(input: Map[String, String], expectedMissing: Seq[String]) = {
+            val badRequest = Core.Request[String](Seq("autowire", "Api", "multiply"), input)
+            assert(Server.routes.isDefinedAt(badRequest))
+            val e @ Error.MissingParams(params) = intercept[Error] {
+              Server.routes(badRequest)
+            }
+            assert(params == expectedMissing)
+            e
           }
+          * - check(Map.empty, Seq("x", "ys"))
+          * - check(Map("x" -> "123"), Seq("ys"))
+          * - check(Map("ys" -> "[123]"), Seq("x"))
+
         }
-        'keysInvalid{
+        'keysInvalid {
           val badRequest = Core.Request(
             Seq("autowire", "Api", "multiply"),
             Map("x" -> "[]", "ys" -> "[1, 2]")
           )
           assert(Server.routes.isDefinedAt(badRequest))
-          val InputError(
-            "Invalid Input",
-            upickle.Invalid.Data(upickle.Js.Arr(), "Number")
-          ) = intercept[InputError] {
+          val e @ Error.InvalidInput(
+          upickle.Invalid.Data(upickle.Js.Arr(), "Number")
+          ) = intercept[Error] {
             Server.routes(badRequest)
           }
+          e
         }
         'invalidJson{
           val badRequest = Core.Request(
@@ -121,12 +126,12 @@ object UpickleTests extends TestSuite{
             Map("x" -> "[", "ys" -> "[1, 2]")
           )
           assert(Server.routes.isDefinedAt(badRequest))
-          val InputError(
-            "Invalid Input",
+          val e @ Error.InvalidInput(
             upickle.Invalid.Json(_, _)
-          ) = intercept[InputError] {
+          ) = intercept[Error] {
             Server.routes(badRequest)
           }
+          e
         }
       }
     }

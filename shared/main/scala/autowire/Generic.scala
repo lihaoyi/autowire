@@ -27,9 +27,17 @@ object Core {
   case class Request[PickleType](path: Seq[String], args: Map[String, PickleType])
 }
 
-/**
- * Signifies that something went wrong when de-serializing the
- * raw input into structured data. The original exception is
- * preserved so you can see what happened.
- */
-case class InputError(msg: String, ex: Throwable) extends Exception(msg, ex)
+trait Error extends Exception
+object Error{
+  /**
+   * Signifies that something went wrong when de-serializing the
+   * raw input into structured data. The original exception is
+   * preserved so you can see what happened.
+   */
+  case class InvalidInput(ex: Throwable) extends Exception(ex) with Error
+  case class MissingParams(params: Seq[String]) extends Exception(
+    s"Missing parameters! ${params.mkString(", ")} were not found."
+  ) with Error
+}
+
+
