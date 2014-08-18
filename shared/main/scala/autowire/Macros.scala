@@ -56,9 +56,9 @@ object Macros {
       // If the tree is one of those default-argument containing blocks or
       // functions, pry it apart such that the main logic can operate on the
       // inner tree, and leave instructions on how
-      (unwrapTree: Tree, methodName: TermName, args: Seq[Tree], prelude: Seq[Tree], deadNames: Seq[String]) = (contents: Tree) match{
+      (unwrapTree: Tree, methodName: TermName, args: Seq[Tree], prelude: Seq[Tree], deadNames: Seq[String] @unchecked) = (contents: Tree) match{
         case x @ q"$thing.$call(..$args)" => (thing, call, args, Nil, Nil)
-        case t @ q"..${statements: List[ValDef]}; $thing.$call(..$args)"
+        case t @ q"..${statements: List[ValDef] @unchecked}; $thing.$call(..$args)"
           if statements.forall(_.isInstanceOf[ValDef]) =>
 
           val (liveStmts, deadStmts) = statements.tail.partition {
@@ -157,23 +157,27 @@ object Macros {
         """
       }
 
-      val bindings = args.foldLeft[Tree](q"autowire.Internal.HNil[autowire.Internal.FailMaybe]()") { (old, next) =>
-        q"autowire.Internal.#:($next, $old)"
+      val bindings = args.foldLeft[Tree](q"Nil") { (old, next) =>
+        q"$next :: $old"
       }
 
       val nameNames: Seq[TermName] = flatArgs.map(x => x.name.toTermName)
-      val assignment = flatArgs.foldLeft[Tree](q"autowire.Internal.HNil()") { (old, next) =>
-        pq"autowire.Internal.#:(${next.name.toTermName}: ${next.typeSignature} @unchecked, $old)"
+      val assignment = flatArgs.foldLeft[Tree](q"Nil") { (old, next) =>
+        pq"scala.::(${next.name.toTermName}: ${next.typeSignature} @unchecked, $old)"
       }
 
       val requiredArgs = flatArgs.zipWithIndex.collect {
         case (arg, i) if hasDefault(arg, i).isEmpty => arg.name.toString
       }
 
+      val futurized = futurize(c)(q"$target.$member(..$nameNames)", member)
       val frag = cq""" autowire.Core.Request(Seq(..$path), $argName) =>
-        autowire.Internal.doValidate($bindings) match{
-          case (..$assignment) =>
-            ${futurize(c)(q"$target.$member(..$nameNames)", member)}.map(${c.prefix}.write(_))
+        autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
+          $futurized.map(${c.prefix}.write(_))
+          case _ =>
+            // should never happen, but we have to provide a case to
+            // avoid compile warnings
+            ???
         }
       """
 
