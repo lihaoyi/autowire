@@ -75,38 +75,28 @@ object UpickleTests extends TestSuite{
       assert(res5 == Seq(6, 3))
     }
     'compilationFailures{
-      def check(error: CompileError, errorPos: String, msgs: String*) = {
-        val stripped = errorPos.reverse.dropWhile("\n ".toSet.contains).reverse
-        val pos = "\n" + error.pos
-        assert(pos == stripped)
-        for(msg <- msgs){
-          assert(error.msg.contains(msg))
-        }
-      }
-      * - check(
-        compileError("123.call()"),
+
+      * - compileError("123.call()").check(
         """
-        compileError("123.call()"),
-                      ^
+      * - compileError("123.call()").check(
+                        ^
         """,
         "You can't call the .call() method on 123"
       )
 
-      * - check(
-        compileError("Client[Api].add(1, 2, 3).toString.call()"),
+      * - compileError("Client[Api].add(1, 2, 3).toString.call()").check(
         """
-        compileError("Client[Api].add(1, 2, 3).toString.call()"),
-                                                            ^
+      * - compileError("Client[Api].add(1, 2, 3).toString.call()").check(
+                                                              ^
         """,
         "You can't call the .call() method",
         "add(1, 2, 3).toString()"
       )
 
-      * - check(
-        compileError("Client[Api].fail1().call()"),
+      * - compileError("Client[Api].fail1().call()").check(
         """
-        compileError("Client[Api].fail1().call()"),
-                                  ^
+      * - compileError("Client[Api].fail1().call()").check(
+                                    ^
         """.stripMargin,
         "value fail1 is not a member of autowire.ClientProxy"
       )
