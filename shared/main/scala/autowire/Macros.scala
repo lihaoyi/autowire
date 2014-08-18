@@ -30,11 +30,8 @@ object Macros {
 
   def futurize(c: Context)(t: c.Tree, member: c.Symbol) = {
     import c.universe._
-    if (member.asMethod.returnType <:< c.typeOf[Future[_]]) {
-      t
-    } else {
-      q"scala.concurrent.Future.successful($t)"
-    }
+    if (member.asMethod.returnType <:< c.typeOf[Future[_]]) t
+    else q"scala.concurrent.Future.successful($t)"
   }
   def clientMacro[Result]
                  (c: Context)
@@ -174,10 +171,7 @@ object Macros {
       val frag = cq""" autowire.Core.Request(Seq(..$path), $argName) =>
         autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
           $futurized.map(${c.prefix}.write(_))
-          case _ =>
-            // should never happen, but we have to provide a case to
-            // avoid compile warnings
-            ???
+          case _ => ???
         }
       """
 
