@@ -133,8 +133,12 @@ object Macros {
 
       def hasDefault(arg: Symbol, i: Int) = {
         val defaultName = s"${member.name}$$default$$${i + 1}"
-        if (tree.symbol.isModule && tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName))
+        if(tree.symbol.isModule && tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName)) {
           Some(defaultName)
+        }
+        else if(tree.symbol.isConstructor && tree.symbol.owner.typeSignature.members.exists(_.name.toString == defaultName)) {
+          Some(defaultName)
+        }
         else
           None
       }

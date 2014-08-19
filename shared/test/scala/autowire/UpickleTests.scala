@@ -187,24 +187,38 @@ object UpickleTests extends TestSuite{
             ) =>
           }
         }
+      }
+    }
+    'classImpl - {
+      trait MyApi{
+        def doThing(i: Int, s: String): Seq[String]
+        def doThingTwo(i: Int, s: String = "aa"): Seq[String]
+      }
 
-        'classImpl - {
-          trait MyApi{
-            def doThing(i: Int, s: String): Seq[String]
-          }
+      class MyOtherApiImpl(meaningOfLife: Int) extends MyApi{
+        def doThing(i: Int, s: String) = Seq.fill(i)(s)
+        def doThingTwo(i: Int, s: String) = Seq.fill(i)(s)
+      }
 
-          class MyOtherApiImpl(meaningOfLife: Int) extends MyApi{
-            def doThing(i: Int, s: String) = Seq.fill(i)(s)
-          }
+      object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
 
-          object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
-            def write[Result: Writer](r: Result) = upickle.write(r)
-            def read[Result: Reader](p: String) = upickle.read[Result](p)
+        val routes = MyServer.route[MyApi](new MyOtherApiImpl(42))
+      }
 
-            val routes = MyServer.route[MyApi](new MyOtherApiImpl(42))
-          }
+      // client-side implementation, and call-site
+      object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+        override def doCall(req: Request) = {
+          println(req)
+          MyServer.routes.apply(req)
         }
       }
+
+      MyClient[MyApi].doThingTwo(3).call().foreach(println)
     }
   }
 }
