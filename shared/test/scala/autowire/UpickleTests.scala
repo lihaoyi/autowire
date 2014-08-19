@@ -209,8 +209,8 @@ object UpickleTests extends TestSuite{
         val anApi = new MyOtherApiImpl(1)
         val routes2 = MyServer.route[MyApi](anApi)
 
-        def anApiDef = new MyOtherApiImpl(2)
-        val routes3 = MyServer.route[MyApi](anApiDef)
+        def anApiDef(inp: Int) = new MyOtherApiImpl(inp)
+        val routes3 = MyServer.route[MyApi](anApiDef(2))
       }
 
       object Client1 extends autowire.Client[String, upickle.Reader, upickle.Writer]{
@@ -233,12 +233,14 @@ object UpickleTests extends TestSuite{
 
       * - {
         val res1 = await(Client1[MyApi].doThingTwo(3).call())
-        val res2 = await(Client2[MyApi].doThingTwo(2).call())
-        val res3 = await(Client3[MyApi].doThingTwo(3).call())
+        val res2 = await(Client1[MyApi].doThingTwo(3,"B").call())
+        val res3 = await(Client2[MyApi].doThingTwo(2).call())
+        val res4 = await(Client3[MyApi].doThingTwo(3,"C").call())
         assert(
           res1 == List("A42","A42","A42"),
-          res2 == List("A1","A1"),
-          res3 == List("A2","A2","A2")
+          res2 == List("B42","B42","B42"),
+          res3 == List("A1","A1"),
+          res4 == List("C2","C2","C2")
         )
       }
     }
