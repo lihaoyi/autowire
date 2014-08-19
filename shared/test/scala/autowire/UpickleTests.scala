@@ -186,7 +186,23 @@ object UpickleTests extends TestSuite{
               Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
             ) =>
           }
+        }
 
+        'classImpl - {
+          trait MyApi{
+            def doThing(i: Int, s: String): Seq[String]
+          }
+
+          class MyOtherApiImpl(meaningOfLife: Int) extends MyApi{
+            def doThing(i: Int, s: String) = Seq.fill(i)(s)
+          }
+
+          object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
+            def write[Result: Writer](r: Result) = upickle.write(r)
+            def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+            val routes = MyServer.route[MyApi](new MyOtherApiImpl(42))
+          }
         }
       }
     }
