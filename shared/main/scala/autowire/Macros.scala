@@ -130,17 +130,20 @@ object Macros {
           .paramLists
           .flatten
 
-
       def hasDefault(arg: Symbol, i: Int) = {
         val defaultName = s"${member.name}$$default$$${i + 1}"
-        if(tree.symbol.isModule && tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName)) {
+        if (tree.symbol.isModule && tree.symbol.asModule.typeSignature.members.exists(_.name.toString == defaultName)) {
           Some(defaultName)
         }
         else if(tree.symbol.isConstructor && tree.symbol.owner.typeSignature.members.exists(_.name.toString == defaultName)) {
           Some(defaultName)
         }
-        else
+        else if(tree.symbol.typeSignature.members.exists(_.name.toString == defaultName)) {
+          Some(defaultName)
+        }
+        else {
           None
+        }
       }
       val argName = c.freshName[TermName]("args")
       val args: Seq[Tree] = flatArgs.zipWithIndex.map { case (arg, i) =>

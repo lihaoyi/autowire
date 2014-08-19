@@ -192,33 +192,55 @@ object UpickleTests extends TestSuite{
     'classImpl - {
       trait MyApi{
         def doThing(i: Int, s: String): Seq[String]
-        def doThingTwo(i: Int, s: String = "aa"): Seq[String]
+        def doThingTwo(i: Int, s: String = "A"): Seq[String]
       }
 
       class MyOtherApiImpl(meaningOfLife: Int) extends MyApi{
-        def doThing(i: Int, s: String) = Seq.fill(i)(s)
-        def doThingTwo(i: Int, s: String) = Seq.fill(i)(s)
+        def doThing(i: Int, s: String) = Seq.fill(i)(s+meaningOfLife.toString)
+        def doThingTwo(i: Int, s: String) = Seq.fill(i)(s+meaningOfLife.toString)
       }
 
       object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
         def write[Result: Writer](r: Result) = upickle.write(r)
         def read[Result: Reader](p: String) = upickle.read[Result](p)
 
-        val routes = MyServer.route[MyApi](new MyOtherApiImpl(42))
+        val routes1 = MyServer.route[MyApi](new MyOtherApiImpl(42))
+
+        val anApi = new MyOtherApiImpl(1)
+        val routes2 = MyServer.route[MyApi](anApi)
+
+        def anApiDef = new MyOtherApiImpl(2)
+        val routes3 = MyServer.route[MyApi](anApiDef)
       }
 
-      // client-side implementation, and call-site
-      object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+      object Client1 extends autowire.Client[String, upickle.Reader, upickle.Writer]{
         def write[Result: Writer](r: Result) = upickle.write(r)
         def read[Result: Reader](p: String) = upickle.read[Result](p)
-
-        override def doCall(req: Request) = {
-          println(req)
-          MyServer.routes.apply(req)
-        }
+        override def doCall(req: Request) = MyServer.routes1.apply(req)
       }
 
-      MyClient[MyApi].doThingTwo(3).call().foreach(println)
+      object Client2 extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+        override def doCall(req: Request) = MyServer.routes2.apply(req)
+      }
+
+      object Client3 extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+        override def doCall(req: Request) = MyServer.routes3.apply(req)
+      }
+
+      * - {
+        val res1 = await(Client1[MyApi].doThingTwo(3).call())
+        val res2 = await(Client2[MyApi].doThingTwo(2).call())
+        val res3 = await(Client3[MyApi].doThingTwo(3).call())
+        assert(
+          res1 == List("A42","A42","A42"),
+          res2 == List("A1","A1"),
+          res3 == List("A2","A2","A2")
+        )
+      }
     }
   }
 }
