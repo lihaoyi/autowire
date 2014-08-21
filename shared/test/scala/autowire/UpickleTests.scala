@@ -186,8 +186,62 @@ object UpickleTests extends TestSuite{
               Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
             ) =>
           }
-
         }
+      }
+    }
+    'classImpl - {
+      trait MyApi{
+        def doThing(i: Int, s: String): Seq[String]
+        def doThingTwo(i: Int, s: String = "A"): Seq[String]
+      }
+
+      class MyOtherApiImpl(meaningOfLife: Int) extends MyApi{
+        def doThing(i: Int, s: String) = Seq.fill(i)(s+meaningOfLife.toString)
+        def doThingTwo(i: Int, s: String) = Seq.fill(i)(s+meaningOfLife.toString)
+      }
+
+      object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+        val routes1 = MyServer.route[MyApi](new MyOtherApiImpl(42))
+
+        val anApi = new MyOtherApiImpl(1)
+        val routes2 = MyServer.route[MyApi](anApi)
+
+        def anApiDef(inp: Int) = new MyOtherApiImpl(inp)
+        val routes3 = MyServer.route[MyApi](anApiDef(2))
+      }
+
+      object Client1 extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+        override def doCall(req: Request) = MyServer.routes1.apply(req)
+      }
+
+      object Client2 extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+        override def doCall(req: Request) = MyServer.routes2.apply(req)
+      }
+
+      object Client3 extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+        override def doCall(req: Request) = MyServer.routes3.apply(req)
+      }
+
+      * - {
+        val res1 = await(Client1[MyApi].doThingTwo(3).call())
+        val res2 = await(Client1[MyApi].doThingTwo(3,"B").call())
+        val res3 = await(Client2[MyApi].doThingTwo(2).call())
+        val res4 = await(Client3[MyApi].doThingTwo(3,"C").call())
+        assert(
+          res1 == List("A42","A42","A42"),
+          res2 == List("B42","B42","B42"),
+          res3 == List("A1","A1"),
+          res4 == List("C2","C2","C2")
+        )
       }
     }
   }
