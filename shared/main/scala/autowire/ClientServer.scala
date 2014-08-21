@@ -1,7 +1,5 @@
 package autowire
 
-
-import autowire.ClientProxy
 import scala.concurrent.Future
 import scala.language.experimental.macros
 /**
