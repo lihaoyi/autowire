@@ -8,9 +8,9 @@ object Build extends sbt.Build{
   val cross = new utest.jsrunner.JsCrossBuild(
     organization := "com.lihaoyi",
 
-    version := "0.2.2",
+    version := "0.2.3-SNAPSHOT",
     name := "autowire",
-    scalaVersion := "2.11.2",
+    scalaVersion := "2.10.4",
     autoCompilerPlugins := true,
     addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.2"),
     libraryDependencies ++= Seq(
@@ -56,7 +56,8 @@ object Build extends sbt.Build{
     ),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "upickle" % "0.2.2" % "test"
-    )
+    ),
+    requiresDOM := false
   )
 
   lazy val jvm = cross.jvm.settings(

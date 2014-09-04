@@ -81,9 +81,9 @@ object Macros {
                 .split('.')
                 .toSeq
                 .:+(methodName.toString)
-      method = (trt.tpe: Type).decl(methodName).asMethod
+      method = (trt.tpe: Type).declaration(methodName).asMethod
       pickled = args
-        .zip(method.paramLists.flatten)
+        .zip(method.paramss.flatten)
         .filter{
           case (Ident(name: TermName), _) => !deadNames.contains(name)
           case (q"$thing.$name", _) if name.toString.contains("$default$") => false
@@ -118,7 +118,7 @@ object Macros {
     val tree = target.tree
     val apiClass = weakTypeOf[Trait]
     val routes: Seq[Tree] = for{
-      member <- apiClass.decls.toSeq
+      member <- apiClass.declarations.toSeq
       // not some rubbish defined on AnyRef
       if !weakTypeOf[AnyRef].members.exists(_.name == member.name)
       // Not a default value synthetic methods
@@ -126,26 +126,24 @@ object Macros {
     } yield {
       val path = apiClass.typeSymbol.fullName.toString.split('.').toSeq :+ member.name.toString
       val flatArgs =
-        member.typeSignature
-          .paramLists
+        member.asMethod
+          .paramss
           .flatten
 
       def hasDefault(arg: Symbol, i: Int) = {
         val defaultName = s"${member.name}$$default$$${i + 1}"
-        if(tree.symbol.isConstructor && tree.symbol.owner.typeSignature.members.exists(_.name.toString == defaultName)) {
+        if(tree.symbol.isMethod && tree.symbol.asMethod.isConstructor && tree.symbol.owner.typeSignature.members.exists(_.name.toString == defaultName)) {
           Some(defaultName)
-        }
-        else if(tree.symbol.typeSignature.members.exists(_.name.toString == defaultName)) {
+        } else if(tree.symbol.typeSignature.members.exists(_.name.toString == defaultName)) {
           Some(defaultName)
-        }
-        else {
+        } else {
           None
         }
       }
-      val argName = c.freshName[TermName]("args")
+      val argName = c.fresh[TermName]("args")
       val args: Seq[Tree] = flatArgs.zipWithIndex.map { case (arg, i) =>
         val default = hasDefault(arg, i) match {
-          case Some(defaultName) => q"scala.util.Right($target.${TermName(defaultName)})"
+          case Some(defaultName) => q"scala.util.Right($target.${newTermName(defaultName)})"
           case None => q"scala.util.Left(autowire.Error.Param.Missing(${arg.name.toString}))"
         }
         q"""

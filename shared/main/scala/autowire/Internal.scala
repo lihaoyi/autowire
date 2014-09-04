@@ -2,7 +2,7 @@ package autowire
 
 import scala.concurrent.Future
 import language.experimental.macros
-import scala.annotation.{tailrec, compileTimeOnly}
+//import scala.annotation.{tailrec, compileTimeOnly}
 
 /**
  * Holds a bunch of implementation details, which need to be public
@@ -23,9 +23,9 @@ object Internal{
    * erased completely when the macro-implementation of `.call()` runs
    */
   class ClientCallable[T]{
-    @compileTimeOnly(
-      ".call() method is synthetic and should not be used directly"
-    )
+//    @compileTimeOnly(
+//      ".call() method is synthetic and should not be used directly"
+//    )
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
 
