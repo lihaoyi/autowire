@@ -40,7 +40,7 @@ Autowire is available at the following maven coordinates, for Scala-JVM and Scal
 "com.lihaoyi" %%% "autowire" % "0.2.3"
 ```
 
-It's only available for Scala 2.11.x and Scala.js 0.5.3+. Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
+It's only available for Scala.js 0.5.3+. Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
 
 Minimal Example
 ===============
