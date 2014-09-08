@@ -48,6 +48,54 @@ object UpickleTests extends TestSuite{
 
       MyClient[MyApi].doThing(3, "lol").call().foreach(println)
     }
+    'inheritedTraits{
+      import upickle._
+
+      // It should also be possible to separate the API into several controllers that
+      // only implement the logic of their corresponding protocols. The controllers are
+      // combined using the Cake pattern.
+
+      trait BookProtocol {
+        def bookList(): Seq[String]
+      }
+
+      trait ArticleProtocol {
+        def articleList(): Seq[String]
+      }
+
+      trait Protocol extends BookProtocol with ArticleProtocol
+
+      trait BookController extends BookProtocol {
+        def bookList(): Seq[String] = Nil
+      }
+
+      trait ArticleController extends ArticleProtocol {
+        def articleList(): Seq[String] = Nil
+      }
+
+      object Controller extends Protocol
+        with BookController
+        with ArticleController
+
+      object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+        val routes = MyServer.route[Protocol](Controller)
+      }
+
+      object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
+        def write[Result: Writer](r: Result) = upickle.write(r)
+        def read[Result: Reader](p: String) = upickle.read[Result](p)
+
+        override def doCall(req: Request) = {
+          println(req)
+          MyServer.routes.apply(req)
+        }
+      }
+
+      MyClient[Protocol].bookList().call().foreach(println)
+    }
     'basicCalls{
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())
