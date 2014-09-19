@@ -120,9 +120,8 @@ trait Server[PickleType, Reader[_], Writer[_]] {
   def write[Result: Writer](r: Result): PickleType
 
   /**
-   * A method for you to override, that actually performs the heavy
-   * lifting to transmit the marshalled function call from the [[Client]]
-   * all the way to the [[Router]]
+   * A macro that generates a `Router` PartialFunction which will dispatch incoming
+   * [[Requests]] to the relevant method on [[Trait]]
    */
   def route[Trait](target: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
 }
