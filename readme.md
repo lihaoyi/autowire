@@ -92,7 +92,7 @@ Reference
 
 This section goes deeper into the steps necessary to use Autowire, and should cover extension points not obvious from the above example.
 
-To bein with, the developer has to implement two interfaces, `Client`:
+To begin with, the developer has to implement two interfaces, `Client`:
 
 ```scala
 trait Client[PickleType, Reader[_], Writer[_]] {
