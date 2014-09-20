@@ -81,7 +81,21 @@ object Macros {
                 .split('.')
                 .toSeq
                 .:+(methodName.toString)
-      method = (trt.tpe: Type).declaration(methodName).asMethod
+
+      // Look for method in the trait and in its base classes.
+      method = {
+        val traitMethod = trt.tpe.declaration(methodName)
+        if (traitMethod != NoSymbol) traitMethod
+        else {
+          trt.tpe.baseClasses.foldLeft(NoSymbol)((acc, cur) =>
+            acc match {
+              case NoSymbol => cur.asClass.toType.declaration(methodName)
+              case _ => acc
+            }
+          )
+        }
+      }.asMethod
+
       pickled = args
         .zip(method.paramss.flatten)
         .filter{
@@ -118,7 +132,9 @@ object Macros {
     val tree = target.tree
     val apiClass = weakTypeOf[Trait]
     val routes: Seq[Tree] = for{
-      member <- apiClass.declarations.toSeq
+      member <- apiClass.declarations.toSeq ++
+        apiClass.baseClasses.map(_.asClass.toType.declarations.toSeq).flatten
+
       // not some rubbish defined on AnyRef
       if !weakTypeOf[AnyRef].members.exists(_.name == member.name)
       // Not a default value synthetic methods
