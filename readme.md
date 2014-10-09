@@ -211,6 +211,8 @@ These errors are not intended to be end-user-facing. Rather, as far as possible 
 
 Autowire only provides custom error handling on the server side, since there are multiple arguments to validate/aggregate. If something goes wrong on the client during de-serialization, you will get the exception thrown from whichever serialization library you're using.
 
+Autowire supports interface methods with default values. When a RPC call's arguments are left out in favor of defaults, Autowire omits these arguments entirely from the pickled request, and evaluates these arguments on the server when it finds them missing from the request instead of throwing an `Error.Param.Missing` like it would if that particular parameter did not have default.
+
 Why Autowire
 ============
 
@@ -253,6 +255,8 @@ Limitations
 ===========
 
 Autowire can only serialize and deserialize things that the chosen serialization library can. For example, if you choose to go with uPickle, this means most of the immutable data structures in the standard library and case classes, but circular data structures aren't supported, and arbitrary object graphs don't work. 
+
+Autowire does not support method overloading on the interfaces/traits used for making the RPCs.
  
 Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing. It is up to the developer using Autowire to decide how he wants to transport the serialized data back and forth, how he wants to respond to errors, etc.
 
