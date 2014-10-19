@@ -87,6 +87,10 @@ Although in this example everything is happening locally, this example goes thro
 
 Here's a [longer example](https://github.com/lihaoyi/workbench-example-app/tree/autowire), which takes advantage of autowire's cross-platform-ness to write an interactive client-server web-app.  
 
+Note that:
+- The client proxy, `MyClient[MyApi]` in this example, must be explicitly written out, and followed by `.call()`  at each site where a remote call is made. That is, you cannot assign `MyClient[MyApi]` to a variable and use that instead.
+- The methods in the autowired API can also be asynchronous, in which case they return `Future[T]`. So the example above could be modeled async as `def doThing(i: Int, s: String): Future[Seq[String]]`.
+
 Reference
 =========
 
