@@ -24,6 +24,16 @@ object Build extends sbt.Build{
         "org.scalamacros" %% s"quasiquotes" % "2.0.0"
       )
     ),
+    //Add in shim
+    unmanagedSourceDirectories in Compile ++= {
+      if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / "shared" / "main" / "annotation-shim")
+      else Nil
+    },
+    //Only test compileTimeOnly in versions of scala that support it
+    unmanagedSourceDirectories in Test ++= {
+      if (scalaVersion.value startsWith "2.10.") Nil
+      else Seq(baseDirectory.value / "shared" / "test" / "annotation-works")
+    },
     // Sonatype
     publishArtifact in Test := false,
     publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
