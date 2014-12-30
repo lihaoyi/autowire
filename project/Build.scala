@@ -58,7 +58,8 @@ object Build extends sbt.Build{
       "com.lihaoyi" %%% "upickle" % "0.2.5" % "test"
     ),
     requiresDOM := false,
-    sourceGenerators in Compile += generateCompileTimeOnlyAnnotationTask.taskValue
+    sourceGenerators in Compile += generateCompileTimeOnlyAnnotationTask.taskValue,
+    sourceGenerators in Test += testCompileTimeOnlyAnnotation.taskValue
   )
 
   lazy val jvm = cross.jvm.settings(
@@ -69,7 +70,8 @@ object Build extends sbt.Build{
       "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test",
       "com.typesafe.play" %% "play-json" % "2.3.0" % "test"
     ),
-    sourceGenerators in Compile += generateCompileTimeOnlyAnnotationTask.taskValue
+    sourceGenerators in Compile += generateCompileTimeOnlyAnnotationTask.taskValue,
+    sourceGenerators in Test += testCompileTimeOnlyAnnotation.taskValue
   )
 
 
@@ -88,6 +90,21 @@ object Build extends sbt.Build{
       Nil
     }
   }
+
+  lazy val testCompileTimeOnlyAnnotation = Def.task {
+    if (!scalaVersion.value.startsWith("2.10")) {
+      val file = (sourceManaged in Test).value / "autowire" /  "CompileTimeOnlyTests.scala"
+      IO.write(file,
+        """
+
+        """.stripMargin)
+      Seq(file)
+    } else {
+      Nil
+    }
+  }
+
+
 
 }
 
