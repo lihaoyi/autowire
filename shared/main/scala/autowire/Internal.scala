@@ -24,7 +24,7 @@ object Internal{
    * erased completely when the macro-implementation of `.call()` runs
    */
   class ClientCallable[T]{
-    @CompileTimeOnlyHack.ann(".call() method is synthetic and should not be used directly")
+    @ScalaVersionStubs.compileTimeOnly(".call() method is synthetic and should not be used directly")
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
 
