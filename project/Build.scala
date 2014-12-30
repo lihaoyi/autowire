@@ -57,7 +57,8 @@ object Build extends sbt.Build{
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "upickle" % "0.2.5" % "test"
     ),
-    requiresDOM := false
+    requiresDOM := false,
+    sourceGenerators in Compile += generateCompileTimeOnlyAnnotationTask.taskValue
   )
 
   lazy val jvm = cross.jvm.settings(
@@ -67,7 +68,26 @@ object Build extends sbt.Build{
       "org.scala-lang" %% "scala-pickling" % "0.9.0" % "test",
       "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test",
       "com.typesafe.play" %% "play-json" % "2.3.0" % "test"
-    )
+    ),
+    sourceGenerators in Compile += generateCompileTimeOnlyAnnotationTask.taskValue
   )
+
+
+  lazy val generateCompileTimeOnlyAnnotationTask = Def.task {
+    if (scalaVersion.value.startsWith("2.10")) {
+      val file = (sourceManaged in Compile).value / "scala" / "annotation" / "compileTimeOnly.scala"
+      IO.write(file,
+        """
+          |package scala.annotation
+          |import scala.annotation.meta._
+          |@getter @setter @beanGetter @beanSetter @companionClass @companionMethod
+          |final class compileTimeOnly(message: String) extends scala.annotation.StaticAnnotation
+        """.stripMargin)
+      Seq(file)
+    } else {
+      Nil
+    }
+  }
+
 }
 
