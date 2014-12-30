@@ -5,6 +5,7 @@ import autowire._
 import scala.util.Properties
 import utest._
 import upickle._
+import autowire._
 
 //This test should only be run in 2.11+ since 2.10 will not enforce this annotation
 object CompileTimeOnlyTests extends TestSuite{
@@ -24,6 +25,10 @@ object CompileTimeOnlyTests extends TestSuite{
 
  val tests = TestSuite{
    'compileTimeOnly {
+
+     //uncomment this out to verify compile error when call is not present
+     //MyClient[MyApi].id(10)
+
 //TODO Re-eanable when compileError runs late enough in the compilation process to catch this
 //    val x = compileError("MyClient[MyApi].id(10)")
 //    assert(x.msg.contains("You have forgotten to append .call() to the end of an autowire call."))
