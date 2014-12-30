@@ -26,13 +26,13 @@ object Build extends sbt.Build{
     ),
     //Add in shim
     unmanagedSourceDirectories in Compile ++= {
-      if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / "shared" / "main" / "annotation-shim")
+      if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / "shared" / "main" / "scala-2.10")
       else Nil
     },
     //Only test compileTimeOnly in versions of scala that support it
     unmanagedSourceDirectories in Test ++= {
       if (scalaVersion.value startsWith "2.10.") Nil
-      else Seq(baseDirectory.value / "shared" / "test" / "annotation-works")
+      else Seq(baseDirectory.value / "shared" / "test" / "scala-2.11")
     },
     // Sonatype
     publishArtifact in Test := false,
