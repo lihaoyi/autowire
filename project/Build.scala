@@ -1,14 +1,15 @@
 import sbt._
 import Keys._
-import scala.scalajs.sbtplugin.ScalaJSPlugin._
 
-import scala.scalajs.sbtplugin.ScalaJSPlugin.ScalaJSKeys._
+import org.scalajs.sbtplugin.ScalaJSPlugin
+import org.scalajs.sbtplugin.ScalaJSPlugin._
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 
 object Build extends sbt.Build{
   val cross = new utest.jsrunner.JsCrossBuild(
     organization := "com.lihaoyi",
 
-    version := "0.2.3",
+    version := "0.2.4-M3",
     name := "autowire",
     scalaVersion := "2.10.4",
     autoCompilerPlugins := true,
@@ -55,7 +56,7 @@ object Build extends sbt.Build{
       "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
     ),
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "upickle" % "0.2.5" % "test"
+      "com.lihaoyi" %%%! "upickle" % "0.2.6-M3" % "test"
     ),
     requiresDOM := false
   )
@@ -63,7 +64,7 @@ object Build extends sbt.Build{
   lazy val jvm = cross.jvm.settings(
     resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % "0.2.5" % "test",
+      "com.lihaoyi" %% "upickle" % "0.2.6-M3" % "test",
       "org.scala-lang" %% "scala-pickling" % "0.9.0" % "test",
       "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test",
       "com.typesafe.play" %% "play-json" % "2.3.0" % "test"
