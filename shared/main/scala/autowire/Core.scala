@@ -16,13 +16,13 @@ object Core {
    *
    * @param path A series of path segments which illustrate which method
    *             to call, typically the fully qualified path of the
-   *             enclosing trait followed by the name of the method
+   *             enclosing trait plus the path to the member
    * @param args Serialized arguments for the method that was called. Kept
    *             as a Map of arg-name -> serialized value. Values which
    *             exactly match the default value are omitted, and are
    *             simply re-constituted by the receiver.
    */
-  case class Request[PickleType](path: Seq[String], args: Map[String, PickleType])
+  case class Request[PickleType](path : Seq[String], args: Map[String, PickleType])
 }
 
 trait Error extends Exception

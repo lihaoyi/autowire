@@ -8,7 +8,7 @@ import scala.language.experimental.macros
  * huge deal. Just make a few clients (they can all inherit/delegate the
  * `callRequest` method) if you want multiple targets.
  */
-trait Client[PickleType, Reader[_], Writer[_]] {
+trait Client[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, Reader, Writer] {
   type Request = Core.Request[PickleType]
   /**
    * Actually makes a request
@@ -25,8 +25,6 @@ trait Client[PickleType, Reader[_], Writer[_]] {
    */
   def doCall(req: Request): Future[PickleType]
 
-  def read[Result: Reader](p: PickleType): Result
-  def write[Result: Writer](r: Result): PickleType
 }
 
 /**
@@ -40,7 +38,7 @@ case class ClientProxy[Trait,
                        Writer[_]]
                       (self: Client[PickleType, Reader, Writer])
 
-trait Server[PickleType, Reader[_], Writer[_]] {
+trait Server[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, Reader, Writer] {
   type Request = Core.Request[PickleType]
   type Router = Core.Router[PickleType]
   /**
@@ -49,6 +47,10 @@ trait Server[PickleType, Reader[_], Writer[_]] {
    */
   def route[Trait](target: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
 
+}
+
+
+trait Serializers[PickleType, Reader[_], Writer[_]] {
   def read[Result: Reader](p: PickleType): Result
   def write[Result: Writer](r: Result): PickleType
 }
