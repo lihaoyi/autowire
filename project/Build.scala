@@ -24,6 +24,11 @@ object Build extends sbt.Build{
         "org.scalamacros" %% s"quasiquotes" % "2.0.0"
       )
     ),
+    //Vary compileTimeOnly based on scala version
+    unmanagedSourceDirectories in Compile ++= {
+      if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / "shared" / "main" / "scala-2.10")
+      else Seq(baseDirectory.value / "shared" / "main" / "scala-2.11")
+    },
     // Sonatype
     publishArtifact in Test := false,
     publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),

@@ -1,5 +1,5 @@
 import autowire.Macros
-//import scala.annotation.{compileTimeOnly, Annotation}
+
 import scala.concurrent.Future
 import language.experimental.macros
 import acyclic.file
@@ -29,7 +29,8 @@ package object autowire extends autowire.Internal.LowPri {
    * Helper implicit to make sure that any calls to methods on [[ClientProxy]]
    * are immediately followed by a `.call()` call
    */
-//  @compileTimeOnly("unwrapClientProxy should not exist at runtime!")
+
+  @ScalaVersionStubs.compileTimeOnly("You have forgotten to append .call() to the end of an autowire call.")
   implicit def unwrapClientProxy[Trait, PickleType, Reader[_], Writer[_]]
                                 (w: ClientProxy[Trait, PickleType, Reader, Writer]): Trait = ???
 }
