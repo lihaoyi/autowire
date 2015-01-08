@@ -65,10 +65,11 @@ object Macros {
     def extractMethod(
       pickleType: WeakTypeTag[_],
       meth: MethodSymbol,
-      prefixPath: Seq[String],
-      memPath: Seq[String],
+      outerPath: Seq[String],
+      innerPath: Seq[String],
       target: Expr[Any],
-      curCls: c.universe.Type): c.universe.Tree = {
+      curCls: c.universe.Type,
+      innerPathOnly: Boolean): c.universe.Tree = {
       val flattenedArgLists = meth.paramss.flatten
       def hasDefault(i: Int) = {
         val defaultName = s"${meth.name}$$default$$${i + 1}"
@@ -107,37 +108,60 @@ object Macros {
 
 
 
-      val memSel = memPath.foldLeft(q"($target)") { (cur, nex) =>
+      val memSel = innerPath.foldLeft(q"($target)") { (cur, nex) =>
         q"$cur.${c.universe.newTermName(nex)}"
       }
 
       val futurized = futurize(q"$memSel(..$nameNames)", meth)
-      val fullPath = prefixPath ++ memPath
-      val frag = cq""" autowire.Core.Request(Seq(..$fullPath), $argName) =>
+      val frag = if (innerPathOnly) {
+        cq""" autowire.Core.Request(_, Seq(..$innerPath), $argName) =>
              autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
                $futurized.map(${c.prefix}.write(_))
                case _ => ???
              }
            """
+      } else {
+        cq""" autowire.Core.Request(Seq(..$outerPath), Seq(..$innerPath), $argName) =>
+             autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
+               $futurized.map(${c.prefix}.write(_))
+               case _ => ???
+             }
+           """
+      }
 
       frag
     }
 
     def getAllRoutesForClass(
-      pt: WeakTypeTag[_],
+      pickleType: WeakTypeTag[_],
       target: Expr[Any],
       curCls: Type,
-      prefixPath: Seq[String],
-      memPath: Seq[String]): Iterable[c.universe.Tree] = {
+      outerPath: Seq[String],
+      innerPath: Seq[String],
+      innerPathOnly: Boolean
+    ): Iterable[c.universe.Tree] = {
       //See http://stackoverflow.com/questions/15786917/cant-get-inherited-vals-with-scala-reflection
       //Yep case law to program WUNDERBAR!
       getValsOrMeths(curCls).flatMap {
         case Left((m, t)) => Nil
           //Vals / Vars
-          getAllRoutesForClass(pt, target, m.typeSignature, prefixPath, memPath :+ m.name.toString)
+          getAllRoutesForClass(
+            pickleType,
+            target,
+            m.typeSignature,
+            outerPath,
+            innerPath :+ m.name.toString,
+            innerPathOnly = innerPathOnly)
         case Right((m, t)) =>
           //Methods
-          Seq(extractMethod(pt, t, prefixPath, memPath :+ m.name.toString, target, curCls))
+          Seq(extractMethod(
+            pickleType,
+            t,
+            outerPath,
+            innerPath :+ m.name.toString,
+            target,
+            curCls,
+            innerPathOnly = innerPathOnly))
 
       }
     }
@@ -146,10 +170,10 @@ object Macros {
 
 
   def clientMacro[Result]
-                 (c: Context)
-                 ()
-                 (implicit r: c.WeakTypeTag[Result])
-                 : c.Expr[Future[Result]] = {
+    (c: Context)
+      ()
+      (implicit r: c.WeakTypeTag[Result])
+  : c.Expr[Future[Result]] = {
 
     import c.universe._
     object Pkg {
@@ -187,7 +211,7 @@ object Macros {
           c.abort(x.pos, s"You can't call the .call() method on $x, only on autowired function calls.")
       }
 
-      (oTree, memPath) = {
+      (oTree, innerPath) = {
         def getMempath(tree: Tree, path: List[String]): (Tree, List[String]) = {
           tree match {
             case Select(t, n) =>
@@ -206,7 +230,7 @@ object Macros {
 
       trtTpe: Type = trt.tpe
 
-      prePath =
+      outerPath =
       trtTpe
         .widen
         .typeSymbol
@@ -242,7 +266,7 @@ object Macros {
           }
         }
 
-        loop(memPath, trtTpe, None)
+        loop(innerPath, trtTpe, None)
       }
 
       pickled = args
@@ -255,11 +279,10 @@ object Macros {
         .map { case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write($t)"}
 
     } yield {
-      val fullPath = prePath ++ memPath
       q"""{
         ..$prelude;
         $proxy.self.doCall(
-          autowire.Core.Request(Seq(..$fullPath), Map(..$pickled))
+          autowire.Core.Request(Seq(..$outerPath), Seq(..$innerPath), Map(..$pickled))
         ).map($proxy.self.read[${r}](_))
       }"""
     }
@@ -270,19 +293,42 @@ object Macros {
     }
   }
 
-  def routeMacro[Trait, PickleType]
-                (c: Context)
-                (target: c.Expr[Trait])
-                (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
-                : c.Expr[Router[PickleType]] = {
+  private def routeMacroCommon[Trait, PickleType, C <: Context]
+    (c: C)
+      (target: c.Expr[Trait], innerPathOnly: Boolean)
+      (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+  : c.Expr[Router[PickleType]] = {
     import c.universe._
     val help = new MacroHelp[c.type](c)
     val topClass = weakTypeOf[Trait]
-    val routes = help.getAllRoutesForClass(pt, target, topClass, topClass.typeSymbol.fullName.toString.split('.').toSeq, Nil).toList
+    val routes = help.getAllRoutesForClass(
+      pt,
+      target,
+      topClass,
+      outerPath = topClass.typeSymbol.fullName.toString.split('.').toSeq,
+      innerPath = Nil,
+      innerPathOnly = innerPathOnly
+    ).toList
 
     val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
     //    println("RES", res)
     c.Expr(res)
+  }
+
+  def routeMacro[Trait, PickleType]
+    (c: Context)
+      (target: c.Expr[Trait])
+      (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+  : c.Expr[Router[PickleType]] = {
+    routeMacroCommon[Trait, PickleType, c.type](c)(target, innerPathOnly = false)
+  }
+
+  def innerRouteMacro[Trait, PickleType]
+    (c: Context)
+      (target: c.Expr[Trait])
+      (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+  : c.Expr[Router[PickleType]] = {
+    routeMacroCommon[Trait, PickleType, c.type](c)(target, innerPathOnly = true)
   }
 
 
