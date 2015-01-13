@@ -9,7 +9,7 @@ object Build extends sbt.Build{
   val cross = new utest.jsrunner.JsCrossBuild(
     organization := "com.lihaoyi",
 
-    version := "0.2.4-M3",
+    version := "0.2.4-RC1",
     name := "autowire",
     scalaVersion := "2.10.4",
     autoCompilerPlugins := true,
@@ -61,7 +61,7 @@ object Build extends sbt.Build{
       "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
     ),
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%%! "upickle" % "0.2.6-M3" % "test"
+      "com.lihaoyi" %%%! "upickle" % "0.2.6-RC1" % "test"
     ),
     requiresDOM := false
   )
@@ -69,7 +69,7 @@ object Build extends sbt.Build{
   lazy val jvm = cross.jvm.settings(
     resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % "0.2.6-M3" % "test",
+      "com.lihaoyi" %% "upickle" % "0.2.6-RC1" % "test",
       "org.scala-lang" %% "scala-pickling" % "0.9.0" % "test",
       "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test",
       "com.typesafe.play" %% "play-json" % "2.3.0" % "test"
