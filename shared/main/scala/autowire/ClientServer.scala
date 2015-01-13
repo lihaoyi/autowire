@@ -46,6 +46,7 @@ trait Server[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, R
    * [[Requests]] to the relevant method on [[Trait]]
    */
   def route[Trait](target: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
+  def innerRoute[Trait](target: Trait): Router = macro Macros.innerRouteMacro[Trait, PickleType]
 
 }
 

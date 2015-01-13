@@ -14,15 +14,20 @@ object Core {
   /**
    * A marshalled autowire'd function call.
    *
-   * @param path A series of path segments which illustrate which method
-   *             to call, typically the fully qualified path of the
-   *             enclosing trait plus the path to the member
+   * Example API method call: com.example.SampleApi.foo.bar()
+   *
+   * @param outerPath The fully qualified path of the
+   *             enclosing trait Seq(com,example,SampleApi)
+   * @param innerPath The path to the method that is called from within
+   *                  the top-level api trait Seq(foo,bar)
    * @param args Serialized arguments for the method that was called. Kept
    *             as a Map of arg-name -> serialized value. Values which
    *             exactly match the default value are omitted, and are
    *             simply re-constituted by the receiver.
    */
-  case class Request[PickleType](path : Seq[String], args: Map[String, PickleType])
+  case class Request[PickleType](outerPath : Seq[String], innerPath : Seq[String], args: Map[String, PickleType]) {
+    def path = outerPath ++ innerPath
+  }
 }
 
 trait Error extends Exception

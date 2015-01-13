@@ -151,7 +151,7 @@ object UpickleTests extends TestSuite{
     }
     'runtimeFailures{
       'noSuchRoute{
-        val badRequest = Core.Request[String](Seq("omg", "wtf", "bbq"), Map.empty)
+        val badRequest = Core.Request[String](Seq("omg", "wtf", "bbq"), Nil, Map.empty)
         assert(!Server.routes.isDefinedAt(badRequest))
         intercept[MatchError] {
           Server.routes(badRequest)
@@ -160,7 +160,8 @@ object UpickleTests extends TestSuite{
       'inputError{
         def check(input: Map[String, String])(expectedError: PartialFunction[Throwable, Unit]) = {
           val badRequest = Core.Request(
-            Seq("autowire", "Api", "multiply"),
+            Seq("autowire", "Api"),
+            Seq("multiply"),
             input
           )
           assert(Server.routes.isDefinedAt(badRequest))

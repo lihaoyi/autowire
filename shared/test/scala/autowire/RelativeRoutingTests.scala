@@ -50,20 +50,33 @@ object RelativeRoutingTests extends TestSuite {
 
       object UPickleServer extends autowire.Server[String, upickle.Reader, upickle.Writer] with UPickleSerializers
       val x = new MyApiImpl("aa")
-      val router = UPickleServer.route[MagicalApi](x)
+      val fullRouter = UPickleServer.route[MagicalApi](x)
+      val innerRouter = UPickleServer.innerRoute[MagicalApi](x)
 
       // client-side implementation, and call-site
       object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer] with UPickleSerializers {
         override def doCall(req: Request) = {
-          router(req)
+          fullRouter(req)
         }
       }
 
-      val a = await(MyClient[MagicalApi].shuffle(3, "lol").call())
-      val b = await(MyClient[MagicalApi].table.getHand("Ben").call())
+      // client-side implementation, and call-site
+      object MyClientIn extends autowire.Client[String, upickle.Reader, upickle.Writer] with UPickleSerializers {
+        override def doCall(req: Request) = {
+          innerRouter(req.copy(outerPath = Seq("YOU SHALL NOT PATH!", "AND MY AXE!")))
+        }
+      }
 
-      assert("3:lol:Foo" == a)
-      assert(goodHand == b)
+      def verifyClient(client : Client[String, Reader, Writer]) {
+        val a = await(client[MagicalApi].shuffle(3, "lol").call())
+        val b = await(client[MagicalApi].table.getHand("Ben").call())
+        assert("3:lol:Foo" == a)
+        assert(goodHand == b)
+      }
+
+      verifyClient(MyClient)
+      verifyClient(MyClientIn)
+
     }
   }
 }
