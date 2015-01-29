@@ -6,7 +6,7 @@ import org.scalajs.sbtplugin.ScalaJSPlugin._
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 
 object Build extends sbt.Build{
-  val cross = new utest.jsrunner.JsCrossBuild(
+  val autowire = crossProject.settings(
     organization := "com.lihaoyi",
 
     version := "0.2.4-RC1",
@@ -16,6 +16,7 @@ object Build extends sbt.Build{
     addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.2"),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "acyclic" % "0.1.2" % "provided",
+      "com.lihaoyi" %%% "utest" % "0.2.5-RC1" % "test",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value
     ) ++ (
       if (scalaVersion.value startsWith "2.11.") Nil
@@ -24,6 +25,11 @@ object Build extends sbt.Build{
         "org.scalamacros" %% s"quasiquotes" % "2.0.0"
       )
     ),
+    testFrameworks += new TestFramework("utest.runner.Framework"),
+    unmanagedSourceDirectories in Compile ++= {
+      if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / ".."/"shared"/"src"/ "main" / "scala-2.10")
+      else Seq(baseDirectory.value / ".."/"shared" / "src"/"main" / "scala-2.11")
+    },
     //Vary compileTimeOnly based on scala version
     unmanagedSourceDirectories in Compile ++= {
       if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / "shared" / "main" / "scala-2.10")
@@ -52,11 +58,7 @@ object Build extends sbt.Build{
           <url>https://github.com/lihaoyi</url>
         </developer>
       </developers>
-  )
-
-  lazy val root = cross.root
-
-  lazy val js = cross.js.settings(
+  ).jsSettings(
     resolvers ++= Seq(
       "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
     ),
@@ -64,9 +66,7 @@ object Build extends sbt.Build{
       "com.lihaoyi" %%%! "upickle" % "0.2.6-RC1" % "test"
     ),
     requiresDOM := false
-  )
-
-  lazy val jvm = cross.jvm.settings(
+  ).jvmSettings(
     resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % "0.2.6-RC1" % "test",
@@ -75,5 +75,9 @@ object Build extends sbt.Build{
       "com.typesafe.play" %% "play-json" % "2.3.0" % "test"
     )
   )
+
+  lazy val autowireJS = autowire.js
+  lazy val autowireJVM = autowire.jvm
+
 }
 
