@@ -16,6 +16,9 @@ object ApiImpl extends Api
 }
 
 // client-side callsite
+
+import autowire._ // needed for correct macro application
+
 object Client extends autowire.Client...
 Client[Api].add(1, 2, 3).call(): Future[Int]
 //         |    |             |
