@@ -3,14 +3,14 @@ crossScalaVersions := Seq("2.10.4", "2.11.4")
 val autowire = crossProject.settings(
   organization := "com.lihaoyi",
 
-  version := "0.2.4",
+  version := "0.2.5",
   name := "autowire",
   scalaVersion := "2.10.4",
   autoCompilerPlugins := true,
   addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.2"),
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "acyclic" % "0.1.2" % "provided",
-    "com.lihaoyi" %%% "utest" % "0.2.5" % "test",
+    "com.lihaoyi" %%% "utest" % "0.3.1" % "test",
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "com.lihaoyi" %%% "upickle" % "0.2.6" % "test"
   ) ++ (

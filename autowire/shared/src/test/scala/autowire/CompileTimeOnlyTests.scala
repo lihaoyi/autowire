@@ -30,7 +30,7 @@ object CompileTimeOnlyTests extends TestSuite{
      //MyClient[MyApi].id(10)
 
 //TODO Re-eanable when compileError runs late enough in the compilation process to catch this
-//    val x = compileError("MyClient[MyApi].id(10)")
+    MyClient[MyApi]
 //    assert(x.msg.contains("You have forgotten to append .call() to the end of an autowire call."))
    }
  }
