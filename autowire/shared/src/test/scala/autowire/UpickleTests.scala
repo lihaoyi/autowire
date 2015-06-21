@@ -244,5 +244,46 @@ object UpickleTests extends TestSuite{
         res4 == List("C2","C2","C2")
       )
     }
+    'accessors {
+      trait T1 {
+        def g: List[Int]
+      }
+      trait T2 {
+        def g: Unit //works with emptyparens, included it for the different compile error
+      }
+      trait T3 {
+        val g: List[String]
+      }
+
+      object O1 extends T1 {
+        override def g: List[Int] = Nil
+      }
+      object O2 extends T2 {
+        override def g = ()
+      }
+      object O3 extends T3 {
+        override val g: List[String] = "1" :: Nil
+      }
+
+      object Bundle extends UpickleBundle {
+        //Error:(268, 47) not enough arguments for method apply: (n: Int)Int in trait LinearSeqOptimized.
+        // Unspecified value parameter n.
+        val r1 = Server.route[T1](O1)
+        // Error: Unit does not take parameters
+        val r2 = Server.route[T2](O2)
+        //Error: diverging implicit expansion for type upickle.Writer[List[Nothing]]
+        // starting with method SeqishW in trait Implicits
+        //I included it because it's looking for List[Nothing], which is weird
+        val r3 = Server.route[T3](O3)
+
+        override val routes = r1 orElse r2 orElse r3
+      }
+
+      assert(
+        await(Bundle.Client[T1].g.call()) == Nil,
+        await(Bundle.Client[T2].g.call()) == (),
+        await(Bundle.Client[T3].g.call()) == "1" :: Nil
+      )
+    }
   }
 }
