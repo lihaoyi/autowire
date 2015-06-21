@@ -4,21 +4,21 @@ import utest.ExecutionContext.RunNow
 import upickle._
 import acyclic.file
 
-
 object UpickleTests extends TestSuite{
-  object Bundle extends GenericClientServerBundle[String, upickle.Reader, upickle.Writer]{
-    def write[T: upickle.Writer](t: T) = upickle.write(t)
-    def read[T: upickle.Reader](t: String) = upickle.read[T](t)
-    def routes = Server.route[Api](Controller)
-  }
-  import Bundle.{Client, Server}
 
+  abstract class UpickleBundle
+    extends GenericClientServerBundle[String, Reader, Writer] {
+    override def write[Result: Writer](r: Result) = upickle.write(r)
+    override def read[Result: Reader](p: String) = upickle.read[Result](p)
+  }
+
+  object ApiBundle extends UpickleBundle{
+    override def routes = Server.route[Api](Controller)
+  }
   import utest.PlatformShims.await
 
   val tests = TestSuite{
     'example{
-      import upickle._
-
       // shared API interface
       trait MyApi{
         def doThing(i: Int, s: String): Seq[String]
@@ -28,29 +28,13 @@ object UpickleTests extends TestSuite{
       object MyApiImpl extends MyApi{
         def doThing(i: Int, s: String) = Seq.fill(i)(s)
       }
-      object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
-        def write[Result: Writer](r: Result) = upickle.write(r)
-        def read[Result: Reader](p: String) = upickle.read[Result](p)
-
-        val routes = MyServer.route[MyApi](MyApiImpl)
+      object Bundle extends UpickleBundle{
+        override val routes = Server.route[MyApi](MyApiImpl)
       }
 
-      // client-side implementation, and call-site
-      object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
-        def write[Result: Writer](r: Result) = upickle.write(r)
-        def read[Result: Reader](p: String) = upickle.read[Result](p)
-
-        override def doCall(req: Request) = {
-          println(req)
-          MyServer.routes.apply(req)
-        }
-      }
-
-      MyClient[MyApi].doThing(3, "lol").call().foreach(println)
+      Bundle.Client[MyApi].doThing(3, "lol").call().foreach(println)
     }
     'inheritedTraits{
-      import upickle._
-
       // It should also be possible to separate the API into several controllers that
       // only implement the logic of their corresponding protocols. The controllers are
       // combined using the Cake pattern.
@@ -77,32 +61,19 @@ object UpickleTests extends TestSuite{
         with BookController
         with ArticleController
 
-      object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
-        def write[Result: Writer](r: Result) = upickle.write(r)
-        def read[Result: Reader](p: String) = upickle.read[Result](p)
-
-        val routes = MyServer.route[Protocol](Controller)
+      object Bundle extends UpickleBundle{
+        override val routes = Server.route[Protocol](Controller)
       }
 
-      object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
-        def write[Result: Writer](r: Result) = upickle.write(r)
-        def read[Result: Reader](p: String) = upickle.read[Result](p)
-
-        override def doCall(req: Request) = {
-          println(req)
-          MyServer.routes.apply(req)
-        }
-      }
-
-      MyClient[Protocol].bookList().call().foreach(println)
+      Bundle.Client[Protocol].bookList().call().foreach(println)
     }
     'basicCalls{
-      val res1 = await(Client[Api].add(1, 2, 3).call())
-      val res2 = await(Client[Api].add(1).call())
-      val res3 = await(Client[Api].add(1, 2).call())
-      val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
-      val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
+      val res1 = await(ApiBundle.Client[Api].add(1, 2, 3).call())
+      val res2 = await(ApiBundle.Client[Api].add(1).call())
+      val res3 = await(ApiBundle.Client[Api].add(1, 2).call())
+      val res4 = await(ApiBundle.Client[Api].multiply(x = 1.2, Seq(2.3)).call())
+      val res5 = await(ApiBundle.Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
+      val res6 = await(ApiBundle.Client[Api].sum(Point(1, 2), Point(10, 20)).call())
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
@@ -111,18 +82,18 @@ object UpickleTests extends TestSuite{
         res5 == "1.1*2.2*3.3*4.4",
         res6 == Point(11, 22)
       )
-      Bundle.transmitted.last
+      ApiBundle.transmitted.last
     }
     'aliased{
-      val api = Client[Api]
-      val res = await(api.add(1, 2, 4).call())
+      val res = await(ApiBundle.Client[Api].add(1, 2, 4).call())
       assert(res == "1+2+4")
     }
     'async{
-      val res5 = await(Client[Api].sloww(Seq("omgomg", "wtf")).call())
+      val res5 = await(ApiBundle.Client[Api].sloww(Seq("omgomg", "wtf")).call())
       assert(res5 == Seq(6, 3))
     }
     'compilationFailures{
+      import ApiBundle.Client
 
       * - compileError("123.call()").check(
         """
@@ -152,9 +123,9 @@ object UpickleTests extends TestSuite{
     'runtimeFailures{
       'noSuchRoute{
         val badRequest = Core.Request[String](Seq("omg", "wtf", "bbq"), Map.empty)
-        assert(!Server.routes.isDefinedAt(badRequest))
+        assert(!ApiBundle.Server.routes.isDefinedAt(badRequest))
         intercept[MatchError] {
-          Server.routes(badRequest)
+          ApiBundle.Server.routes(badRequest)
         }
       }
       'inputError{
@@ -163,8 +134,8 @@ object UpickleTests extends TestSuite{
             Seq("autowire", "Api", "multiply"),
             input
           )
-          assert(Server.routes.isDefinedAt(badRequest))
-          val error = intercept[Error] { Server.routes(badRequest) }
+          assert(ApiBundle.Server.routes.isDefinedAt(badRequest))
+          val error = intercept[Error] { ApiBundle.Server.routes(badRequest) }
           assert(expectedError.isDefinedAt(error))
         }
 
@@ -250,32 +221,22 @@ object UpickleTests extends TestSuite{
         def doThingTwo(i: Int, s: String) = Seq.fill(i)(s+meaningOfLife.toString)
       }
 
-      object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
-        def write[Result: Writer](r: Result) = upickle.write(r)
-        def read[Result: Reader](p: String) = upickle.read[Result](p)
-
-        val routes1 = MyServer.route[MyApi](new MyOtherApiImpl(42))
-
+      object Bundle1 extends UpickleBundle{
+        override val routes = Server.route[MyApi](new MyOtherApiImpl(42))
+      }
+      object Bundle2 extends UpickleBundle{
         val anApi = new MyOtherApiImpl(1)
-        val routes2 = MyServer.route[MyApi](anApi)
-
+        override val routes = Server.route[MyApi](anApi)
+      }
+      object Bundle3 extends UpickleBundle{
         def anApiDef(inp: Int) = new MyOtherApiImpl(inp)
-        val routes3 = MyServer.route[MyApi](anApiDef(2))
+        override val routes = Server.route[MyApi](anApiDef(2))
       }
-      class UpickleClient(pf: PartialFunction[MyServer.Request, concurrent.Future[String]]) extends autowire.Client[String, upickle.Reader, upickle.Writer]{
-        def write[Result: Writer](r: Result) = upickle.write(r)
-        def read[Result: Reader](p: String) = upickle.read[Result](p)
-        def doCall(req: Request) = pf(req)
-      }
-      object Client1 extends UpickleClient(MyServer.routes1)
 
-      object Client2 extends UpickleClient(MyServer.routes2)
-      object Client3 extends UpickleClient(MyServer.routes3)
-
-      val res1 = await(Client1[MyApi].doThingTwo(3).call())
-      val res2 = await(Client1[MyApi].doThingTwo(3,"B").call())
-      val res3 = await(Client2[MyApi].doThingTwo(2).call())
-      val res4 = await(Client3[MyApi].doThingTwo(3,"C").call())
+      val res1 = await(Bundle1.Client[MyApi].doThingTwo(3).call())
+      val res2 = await(Bundle1.Client[MyApi].doThingTwo(3,"B").call())
+      val res3 = await(Bundle2.Client[MyApi].doThingTwo(2).call())
+      val res4 = await(Bundle3.Client[MyApi].doThingTwo(3,"C").call())
       assert(
         res1 == List("A42","A42","A42"),
         res2 == List("B42","B42","B42"),
