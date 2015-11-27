@@ -58,4 +58,36 @@ object Internal{
       }
     )
   }
+
+
+  sealed trait RouteTree[PickleType] {
+    def isValidPath(route: Seq[String]): Boolean
+    def lookup(route: Seq[String]): Map[String,PickleType] => Future[PickleType]
+  }
+
+  class RouteNode[PickleType](children: Map[String,RouteTree[PickleType]]) extends RouteTree[PickleType] {
+
+    override def isValidPath(route: Seq[String]): Boolean = {
+      route.headOption.flatMap(children.get).exists(_.isValidPath(route.tail))
+    }
+
+    override def lookup(route: Seq[String]): Map[String,PickleType] => Future[PickleType] = {
+      children(route.head).lookup(route.tail)
+    }
+
+    override def toString = children.toString()
+  }
+
+  class RouteLeaf[PickleType](result: Map[String,PickleType] => Future[PickleType]) extends RouteTree[PickleType] {
+    override def isValidPath(route: Seq[String]): Boolean = route.isEmpty
+    override def lookup(route: Seq[String]): Map[String,PickleType] => Future[PickleType] = result
+  }
+
+  class RouterThingy[PickleType](tree: RouteTree[PickleType]) {
+    type Router = Core.Router[PickleType]
+    def router: Router = {
+      case autowire.Core.Request(path,args) if tree.isValidPath(path) => tree.lookup(path)(args)
+    }
+  }
+
 }

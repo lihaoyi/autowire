@@ -62,6 +62,61 @@ object Macros {
       }
     }
 
+    def extractMethod2(
+      pickleType: WeakTypeTag[_],
+      meth: MethodSymbol,
+      memPath: Seq[String],
+      target: Expr[Any],
+      curCls: c.universe.Type): c.Tree = {
+
+      val flattenedArgLists = meth.paramss.flatten
+
+      def hasDefault(i: Int) = {
+        val defaultName = s"${meth.name}$$default$$${i + 1}"
+        if (curCls.members.exists(_.name.toString == defaultName)) {
+          Some(defaultName)
+        } else {
+          None
+        }
+      }
+      val argName = c.fresh[TermName]("args")
+      val args: Seq[Tree] = flattenedArgLists.zipWithIndex.map { case (arg, i) =>
+        val default = hasDefault(i) match {
+          case Some(defaultName) => q"scala.util.Right(($target).${newTermName(defaultName)})"
+          case None => q"scala.util.Left(autowire.Error.Param.Missing(${arg.name.toString}))"
+        }
+        q"""autowire.Internal.read[$pickleType, ${arg.typeSignature}](
+                 $argName,
+                 $default,
+                 ${arg.name.toString},
+                 ${c.prefix}.read[${arg.typeSignature}](_)
+               )
+          """
+      }
+
+      val bindings = args.foldLeft[Tree](q"Nil") { (old, next) =>
+        q"$next :: $old"
+      }
+
+      val nameNames: Seq[TermName] = flattenedArgLists.map(x => x.name.toTermName)
+      val assignment = flattenedArgLists.foldLeft[Tree](q"Nil") { (old, next) =>
+        pq"scala.::(${next.name.toTermName}: ${next.typeSignature} @unchecked, $old)"
+      }
+
+      val memSel = memPath.foldLeft(q"($target)") { (cur, nex) =>
+        q"$cur.${c.universe.newTermName(nex)}"
+      }
+
+      val futurized = futurize(q"$memSel(..$nameNames)", meth)
+
+      val frag = cq"""($argName) => autowire.Internal.doValidate($bindings) match {
+        case (..$assignment) =>$futurized.map(${c.prefix}.write(_))
+        case _ => ???
+      }"""
+
+      q"new autowire.Internal.RouteLeaf({case $frag})"
+    }
+
     def extractMethod(
       pickleType: WeakTypeTag[_],
       meth: MethodSymbol,
@@ -69,7 +124,9 @@ object Macros {
       memPath: Seq[String],
       target: Expr[Any],
       curCls: c.universe.Type): c.universe.Tree = {
+      println(meth)
       val flattenedArgLists = meth.paramss.flatten
+      println(flattenedArgLists)
       def hasDefault(i: Int) = {
         val defaultName = s"${meth.name}$$default$$${i + 1}"
         if (curCls.members.exists(_.name.toString == defaultName)) {
@@ -110,9 +167,13 @@ object Macros {
       val memSel = memPath.foldLeft(q"($target)") { (cur, nex) =>
         q"$cur.${c.universe.newTermName(nex)}"
       }
+      println("()()(()()")
+      println(target)
+      println(memPath)
 
       val futurized = futurize(q"$memSel(..$nameNames)", meth)
       val fullPath = prefixPath ++ memPath
+
       val frag = cq""" autowire.Core.Request(Seq(..$fullPath), $argName) =>
              autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
                $futurized.map(${c.prefix}.write(_))
@@ -123,6 +184,25 @@ object Macros {
       frag
     }
 
+
+
+    def getRouteTreeForClass(
+      pt: WeakTypeTag[_],
+      target: Expr[Any],
+      curCls: Type,
+      memPath: Seq[String]): c.Tree = {
+      val children: Iterable[c.Tree] = getValsOrMeths(curCls).map {
+        case Left((m,t)) =>
+          val node = getRouteTreeForClass(pt,target,m.typeSignature, memPath :+ m.name.toString)
+          q"""(${m.name.toString},$node)"""
+
+        case Right((m,t)) =>
+          val leaf = extractMethod2(pt,t,memPath :+ m.name.toString,target,curCls)
+          q"""(${m.name.toString},$leaf)"""
+      }
+      q"new autowire.Internal.RouteNode(Map(..$children))"
+    }
+
     def getAllRoutesForClass(
       pt: WeakTypeTag[_],
       target: Expr[Any],
@@ -131,8 +211,9 @@ object Macros {
       memPath: Seq[String]): Iterable[c.universe.Tree] = {
       //See http://stackoverflow.com/questions/15786917/cant-get-inherited-vals-with-scala-reflection
       //Yep case law to program WUNDERBAR!
+
       getValsOrMeths(curCls).flatMap {
-        case Left((m, t)) => Nil
+        case Left((m, t)) =>
           //Vals / Vars
           getAllRoutesForClass(pt, target, m.typeSignature, prefixPath, memPath :+ m.name.toString)
         case Right((m, t)) =>
@@ -268,6 +349,24 @@ object Macros {
       case Win(tree, s) => c.Expr[Future[Result]](tree)
       case Luz(s) => c.abort(c.enclosingPosition, s)
     }
+  }
+
+
+  def routeMacro2[Trait, PickleType]
+    (c: Context)
+    (target: c.Expr[Trait])
+    (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+    : c.Expr[Router[PickleType]] = {
+    import c.universe._
+    val help = new MacroHelp[c.type](c)
+    val topClass = weakTypeOf[Trait]
+
+    val partial = help.getRouteTreeForClass(pt,target,topClass,Nil)
+    val routes = topClass.typeSymbol.fullName.toString.split('.').reverse.foldLeft(partial) {
+      case (acc,prefix) => q"new autowire.Internal.RouteNode(Map($prefix->$acc))"
+    }
+    val res = q"""new autowire.Internal.RouterThingy[$pt]($routes).router"""
+    c.Expr(res)
   }
 
   def routeMacro[Trait, PickleType]

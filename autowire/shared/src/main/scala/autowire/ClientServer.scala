@@ -45,7 +45,7 @@ trait Server[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, R
    * A macro that generates a `Router` PartialFunction which will dispatch incoming
    * [[Requests]] to the relevant method on [[Trait]]
    */
-  def route[Trait](target: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
+  def route[Trait](target: Trait): Router = macro Macros.routeMacro2[Trait, PickleType]
 
 }
 
