@@ -83,7 +83,7 @@ object Internal{
     override def lookup(route: Seq[String]): Map[String,PickleType] => Future[PickleType] = result
   }
 
-  class RouterThingy[PickleType](tree: RouteTree[PickleType]) {
+  class RouterContext[PickleType](tree: RouteTree[PickleType]) {
     type Router = Core.Router[PickleType]
     def router: Router = {
       case autowire.Core.Request(path,args) if tree.isValidPath(path) => tree.lookup(path)(args)

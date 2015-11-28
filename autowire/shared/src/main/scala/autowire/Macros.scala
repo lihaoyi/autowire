@@ -275,7 +275,7 @@ object Macros {
     val routes = topClass.typeSymbol.fullName.toString.split('.').reverse.foldLeft(partial) {
       case (acc,prefix) => q"new autowire.Internal.RouteNode(Map($prefix->$acc))"
     }
-    val res = q"""new autowire.Internal.RouterThingy[$pt]($routes).router"""
+    val res = q"""new autowire.Internal.RouterContext[$pt]($routes).router"""
     c.Expr(res)
   }
 
