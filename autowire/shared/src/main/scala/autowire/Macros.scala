@@ -159,10 +159,6 @@ object Macros {
       }
     }
     val res = for {
-      q"${Pkg(_)}.`package`.$callableName[$t]($contents)" <- Win(c.prefix.tree,
-        "You can only use .call() on the Proxy returned by autowire.Client.apply, not " + c.prefix.tree
-      )
-      if Seq("clientFutureCallable", "clientCallable").contains(callableName.toString)
       // If the tree is one of those default-argument containing blocks or
       // functions, pry it apart such that the main logic can operate on the
       // inner tree, and leave instructions on how
