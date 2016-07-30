@@ -2,8 +2,9 @@ package autowire
 
 import java.io.File
 import utest._
-import utest.ExecutionContext.RunNow
-import upickle._
+import utest.framework._
+import utest.framework.ExecutionContext.RunNow
+import upickle.default._
 import acyclic.file
 
 
@@ -43,17 +44,17 @@ object RelativeRoutingTests extends TestSuite {
       }
 
 
-      trait UPickleSerializers extends Serializers[String, upickle.Reader, upickle.Writer] {
-        override def write[Result: Writer](r: Result) = upickle.write(r)
-        override def read[Result: Reader](p: String) = upickle.read[Result](p)
+      trait UPickleSerializers extends Serializers[String, upickle.default.Reader, upickle.default.Writer] {
+        override def write[Result: Writer](r: Result) = upickle.default.write(r)
+        override def read[Result: Reader](p: String) = upickle.default.read[Result](p)
       }
 
-      object UPickleServer extends autowire.Server[String, upickle.Reader, upickle.Writer] with UPickleSerializers
+      object UPickleServer extends autowire.Server[String, upickle.default.Reader, upickle.default.Writer] with UPickleSerializers
       val x = new MyApiImpl("aa")
       val router = UPickleServer.route[MagicalApi](x)
 
       // client-side implementation, and call-site
-      object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer] with UPickleSerializers {
+      object MyClient extends autowire.Client[String, upickle.default.Reader, upickle.default.Writer] with UPickleSerializers {
         override def doCall(req: Request) = {
           router(req)
         }
