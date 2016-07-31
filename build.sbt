@@ -1,18 +1,18 @@
-crossScalaVersions := Seq("2.10.4", "2.11.4")
+crossScalaVersions := Seq("2.10.4", "2.11.8")
 
 val autowire = crossProject.settings(
   organization := "com.lihaoyi",
 
   version := "0.2.5",
   name := "autowire",
-  scalaVersion := "2.10.4",
+  scalaVersion := "2.11.8",
   autoCompilerPlugins := true,
-  addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.2"),
+  addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.4"),
   libraryDependencies ++= Seq(
-    "com.lihaoyi" %% "acyclic" % "0.1.2" % "provided",
-    "com.lihaoyi" %%% "utest" % "0.3.1" % "test",
+    "com.lihaoyi" %% "acyclic" % "0.1.4" % "provided",
+    "com.lihaoyi" %%% "utest" % "0.4.3" % "test",
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    "com.lihaoyi" %%% "upickle" % "0.2.6" % "test"
+    "com.lihaoyi" %%% "upickle" % "0.4.1" % "test"
   ) ++ (
     if (scalaVersion.value startsWith "2.11.") Nil
     else Seq(
@@ -21,15 +21,6 @@ val autowire = crossProject.settings(
     )
     ),
   testFrameworks += new TestFramework("utest.runner.Framework"),
-  unmanagedSourceDirectories in Compile ++= {
-    if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / ".."/"shared"/"src"/ "main" / "scala-2.10")
-    else Seq(baseDirectory.value / ".."/"shared" / "src"/"main" / "scala-2.11")
-  },
-  //Vary compileTimeOnly based on scala version
-  unmanagedSourceDirectories in Compile ++= {
-    if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / "shared" / "main" / "scala-2.10")
-    else Seq(baseDirectory.value /".."/ "shared"/"src"/"main"/ "scala-2.11")
-  },
   // Sonatype
   publishArtifact in Test := false,
   publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
@@ -61,9 +52,9 @@ val autowire = crossProject.settings(
 ).jvmSettings(
   resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
   libraryDependencies ++= Seq(
-    "org.scala-lang" %% "scala-pickling" % "0.9.0" % "test",
+    "org.scala-lang" %% "scala-pickling" % "0.9.1" % "test",
     "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test",
-    "com.typesafe.play" %% "play-json" % "2.3.0" % "test"
+    "com.typesafe.play" %% "play-json" % "2.4.8" % "test"
   )
 )
 

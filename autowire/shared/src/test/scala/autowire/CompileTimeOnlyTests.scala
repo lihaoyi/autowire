@@ -4,16 +4,16 @@ import scala.concurrent.Future
 import autowire._
 import scala.util.Properties
 import utest._
-import upickle._
+import upickle.default._
 import autowire._
 
 //This test should only be run in 2.11+ since 2.10 will not enforce this annotation
 object CompileTimeOnlyTests extends TestSuite{
   import scala.concurrent.ExecutionContext.Implicits.global
   // client-side implementation, and call-site
-  object MyClient extends autowire.Client[String, upickle.Reader, upickle.Writer]{
-    def write[Result: Writer](r: Result) = upickle.write(r)
-    def read[Result: Reader](p: String) = upickle.read[Result](p)
+  object MyClient extends autowire.Client[String, upickle.default.Reader, upickle.default.Writer]{
+    def write[Result: Writer](r: Result) = upickle.default.write(r)
+    def read[Result: Reader](p: String) = upickle.default.read[Result](p)
     override def doCall(req: Request) = {
       Future(req.args("x"))
     }

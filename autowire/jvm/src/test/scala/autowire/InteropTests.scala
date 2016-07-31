@@ -2,9 +2,9 @@ package autowire
 import utest._
 import scala.concurrent.Future
 import java.io.{ObjectInputStream, ByteArrayInputStream, ObjectOutputStream, ByteArrayOutputStream}
-import utest.util.Tree
+import utest.framework.Tree
 import utest.framework.Test
-import utest.ExecutionContext.RunNow
+import utest.framework.ExecutionContext.RunNow
 import scala.reflect.ClassTag
 import utest._
 import scala.pickling._
