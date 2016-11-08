@@ -1,25 +1,25 @@
-crossScalaVersions := Seq("2.10.4", "2.11.8")
+crossScalaVersions := Seq("2.10.4", "2.11.8", "2.12.0")
 
 val autowire = crossProject.settings(
   organization := "com.lihaoyi",
 
-  version := "0.2.5",
+  version := "0.2.6",
   name := "autowire",
   scalaVersion := "2.11.8",
   autoCompilerPlugins := true,
-  addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.4"),
+  addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.5"),
   libraryDependencies ++= Seq(
-    "com.lihaoyi" %% "acyclic" % "0.1.4" % "provided",
-    "com.lihaoyi" %%% "utest" % "0.4.3" % "test",
+    "com.lihaoyi" %% "acyclic" % "0.1.5" % "provided",
+    "com.lihaoyi" %%% "utest" % "0.4.4" % "test",
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    "com.lihaoyi" %%% "upickle" % "0.4.1" % "test"
+    "com.lihaoyi" %%% "upickle" % "0.4.4" % "test"
   ) ++ (
-    if (scalaVersion.value startsWith "2.11.") Nil
+    if (!scalaVersion.value.startsWith("2.10.")) Nil
     else Seq(
       compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
       "org.scalamacros" %% s"quasiquotes" % "2.0.0"
     )
-    ),
+  ),
   testFrameworks += new TestFramework("utest.runner.Framework"),
   // Sonatype
   publishArtifact in Test := false,
@@ -52,10 +52,17 @@ val autowire = crossProject.settings(
 ).jvmSettings(
   resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
   libraryDependencies ++= Seq(
-    "org.scala-lang" %% "scala-pickling" % "0.9.1" % "test",
-    "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test",
-    "com.typesafe.play" %% "play-json" % "2.4.8" % "test"
-  )
+//    "org.scala-lang" %% "scala-pickling" % "0.9.1" % "test",
+    "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test"
+//    "com.typesafe.play" %% "play-json" % "2.4.8" % "test"
+  ),
+  libraryDependencies ++= {
+    if (!scalaVersion.value.startsWith("2.11.")) Nil
+    else Seq(
+      "org.scala-lang" %% "scala-pickling" % "0.9.1" % "test",
+      "com.typesafe.play" %% "play-json" % "2.4.8" % "test"
+    )
+  }
 )
 
 lazy val autowireJS = autowire.js

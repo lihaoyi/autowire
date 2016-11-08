@@ -31,7 +31,7 @@ object Macros {
     import c.universe._
     def futurize(t: Tree, member: MethodSymbol) = {
       if (member.returnType <:< c.typeOf[Future[_]]) t
-      else q"scala.concurrent.Future.successful($t)"
+      else q"scala.concurrent.Future($t)"
     }
 
     def getValsOrMeths(curCls: Type): Iterable[Either[(c.Symbol, MethodSymbol), (c.Symbol, MethodSymbol)]] = {
