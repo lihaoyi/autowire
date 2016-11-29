@@ -60,8 +60,10 @@ object RelativeRoutingTests extends TestSuite {
         }
       }
 
-      val a = await(MyClient[MagicalApi].shuffle(3, "lol").call())
-      val b = await(MyClient[MagicalApi].table.getHand("Ben").call())
+      val client = MyClient[MagicalApi]
+
+      val a = await(client.shuffle(3, "lol").call())
+      val b = await(client.table.getHand("Ben").call())
 
       assert("3:lol:Foo" == a)
       assert(goodHand == b)
