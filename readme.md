@@ -3,16 +3,16 @@ Autowire 0.2.6
 
 Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
 
-```scala    
+```scala
 // shared interface
 trait Api{
-  def add(x: Int, y: Int, z: Int): Int 
+  def add(x: Int, y: Int, z: Int): Int
 }
 
-// server-side router and implementation 
+// server-side router and implementation
 object Server extends autowire.Server...
 object ApiImpl extends Api
-  def add(x: Int, y: Int, z: Int) = x + y + z 
+  def add(x: Int, y: Int, z: Int) = x + y + z
 }
 
 // client-side callsite
@@ -27,9 +27,9 @@ Client[Api].add(1, 2, 3).call(): Future[Int]
 //         Call a method on the `Api` trait
 ```
 
-This provides a range of nice properties: under-the-hood the macro converts your method calls into RPCs, together with the relevant serialization code, but you do not need to deal with that yourself. Furthermore, since the RPCs appear to be method calls, tools like IDEs are able to work with them, e.g. doing project-wide renames or analysis (jump-to-definition, find-usages, etc.). 
+This provides a range of nice properties: under-the-hood the macro converts your method calls into RPCs, together with the relevant serialization code, but you do not need to deal with that yourself. Furthermore, since the RPCs appear to be method calls, tools like IDEs are able to work with them, e.g. doing project-wide renames or analysis (jump-to-definition, find-usages, etc.).
 
-Most importantly, the compiler is able to typecheck these RPCs, and ensure that you are always calling them with the correct arguments, and handling the return-value correctly in turn. This removes an entire class of errors.  
+Most importantly, the compiler is able to typecheck these RPCs, and ensure that you are always calling them with the correct arguments, and handling the return-value correctly in turn. This removes an entire class of errors.
 
 Autowire is completely agnostic to both the serialization library, and the transport-mechanism.
 
@@ -53,19 +53,19 @@ Here is a minimal example of Autowire in action, using [uPickle](https://www.git
 import autowire._
 import upickle._
 
-// shared API interface 
+// shared API interface
 trait MyApi{
   def doThing(i: Int, s: String): Seq[String]
 }
 
-// server-side implementation, and router 
+// server-side implementation, and router
 object MyApiImpl extends MyApi{
   def doThing(i: Int, s: String) = Seq.fill(i)(s)
 }
 object MyServer extends autowire.Server[String, upickle.Reader, upickle.Writer]{
   def write[Result: Writer](r: Result) = upickle.write(r)
   def read[Result: Reader](p: String) = upickle.read[Result](p)
-  
+
   val routes = MyServer.route[MyApi](MyApiImpl)
 }
 
@@ -88,10 +88,9 @@ In this example, we have a shared `MyApi` trait, which contains a trait/interfac
 
 Although in this example everything is happening locally, this example goes through the entire serialization/de-serialization process when transferring the arguments/return-value. Thus, it is trivial to replace the direct call to `MyServer.routes` to a remote call over HTTP or TCP or some other transport with `MyClient` and `MyServer`/`MyApiImpl` living on different machines or even running on different platforms (e.g. Scala-JS/Scala-JVM).
 
-Here's a [longer example](https://github.com/lihaoyi/workbench-example-app/tree/autowire), which takes advantage of autowire's cross-platform-ness to write an interactive client-server web-app.  
+Here's a [longer example](https://github.com/lihaoyi/workbench-example-app/tree/autowire), which takes advantage of autowire's cross-platform-ness to write an interactive client-server web-app.
 
 Note that:
-- The client proxy, `MyClient[MyApi]` in this example, must be explicitly written out, and followed by `.call()`  at each site where a remote call is made. That is, you cannot assign `MyClient[MyApi]` to a variable and use that instead.
 - The methods in the autowired API can also be asynchronous, in which case they return `Future[T]`. So the example above could be modeled async as `def doThing(i: Int, s: String): Future[Seq[String]]`.
 
 Reference
@@ -106,7 +105,7 @@ trait Client[PickleType, Reader[_], Writer[_]] {
   type Request = Core.Request[PickleType]
   def read[Result: Reader](p: PickleType): Result
   def write[Result: Writer](r: Result): PickleType
-  
+
   /**
    * A method for you to override, that actually performs the heavy
    * lifting to transmit the marshalled function call from the [[Client]]
@@ -122,7 +121,7 @@ And `Server`
 trait Server[PickleType, Reader[_], Writer[_]] {
   type Request = Core.Request[PickleType]
   type Router = Core.Router[PickleType]
-  
+
   def read[Result: Reader](p: PickleType): Result
   def write[Result: Writer](r: Result): PickleType
 
@@ -144,7 +143,7 @@ If the serialization library you're using doesn't need `Reader[_]` or `Writer[_]
 
 Lastly, you need to wire together client and server to get them talking to one another: this is done by overriding `Client.doCall`, which takes the `Request` object holding the serialized arguments and returns a `Future` containing the serialized response, and by using `Server.route`, which generates a `Router` `PartialFunction` which you can then feed `Request`
  object into to receive a serialized response in return. These types are defined as
- 
+
 ```scala
 object Core {
   /**
@@ -168,15 +167,15 @@ object Core {
   case class Request[PickleType](path: Seq[String], args: Map[String, PickleType])
 }
 ```
- 
- is outside the scope of Autowire, as is how you serialize/deserialize the arguments/return-value using the `read` and `write` functions. 
+
+ is outside the scope of Autowire, as is how you serialize/deserialize the arguments/return-value using the `read` and `write` functions.
 
 In short,
 
 - `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with [unit tests](blob/master/jvm/src/test/scala/autowire/InteropTests.scala) to ensure that they are working.
-- `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) and the response-data back is up to you as long as you can give Autowire a `Future[PickleType]` in exchange for its `Request`.  
+- `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) and the response-data back is up to you as long as you can give Autowire a `Future[PickleType]` in exchange for its `Request`.
 
-If you still don't fully understand, and need help getting something working, take a look at the [complete example](https://github.com/lihaoyi/workbench-example-app/tree/autowire).  
+If you still don't fully understand, and need help getting something working, take a look at the [complete example](https://github.com/lihaoyi/workbench-example-app/tree/autowire).
 
 Error Handling
 ==============
@@ -244,7 +243,7 @@ Client[Api].fastOp(editor.code).call()
 
 - Similarly, since Autowire RPC calls are (at least superficially) just method calls, things like find-usages, rename-all, and other such tools all work flawlessly across these calls.
 
-- Autowire deals directly with `Future`s; this means that it plays nicely with the rest of the Scala ecosystem, including tools such as `async` and `await`, while making it much easier for future developers to reason about than callback soup.  
+- Autowire deals directly with `Future`s; this means that it plays nicely with the rest of the Scala ecosystem, including tools such as `async` and `await`, while making it much easier for future developers to reason about than callback soup.
 
 ```scala
 // endpoint definition
@@ -256,15 +255,15 @@ val res: List[(String, String)] = {
 }
 ```
 
-- Also shown in the example above, serialization and deserialization of data structures is handled implicitly. Thus you can call functions which return non-trivial structures and receive the structured data directly, without having to fiddle with JSON or other ad-hoc encodings yourself. 
+- Also shown in the example above, serialization and deserialization of data structures is handled implicitly. Thus you can call functions which return non-trivial structures and receive the structured data directly, without having to fiddle with JSON or other ad-hoc encodings yourself.
 
 Limitations
 ===========
 
-Autowire can only serialize and deserialize things that the chosen serialization library can. For example, if you choose to go with uPickle, this means most of the immutable data structures in the standard library and case classes, but circular data structures aren't supported, and arbitrary object graphs don't work. 
+Autowire can only serialize and deserialize things that the chosen serialization library can. For example, if you choose to go with uPickle, this means most of the immutable data structures in the standard library and case classes, but circular data structures aren't supported, and arbitrary object graphs don't work.
 
 Autowire does not support method overloading on the interfaces/traits used for making the RPCs.
- 
+
 Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing. It is up to the developer using Autowire to decide how he wants to transport the serialized data back and forth, how he wants to respond to errors, etc.
 
 To see a simple example involving a ScalaJS client and Spray server, check out this example:
