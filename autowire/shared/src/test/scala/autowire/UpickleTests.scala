@@ -1,10 +1,8 @@
 package autowire
-import utest._
-import utest.framework._
-import utest.framework.ExecutionContext.RunNow
 import upickle.Js
 import upickle.default._
-import acyclic.file
+import utest._
+import utest.framework.ExecutionContext.RunNow
 
 
 object UpickleTests extends TestSuite{
@@ -14,12 +12,10 @@ object UpickleTests extends TestSuite{
     def routes = Server.route[Api](Controller)
   }
   import Bundle.{Client, Server}
-
   import utest.PlatformShims.await
 
   val tests = TestSuite{
     'example{
-      import upickle._
 
       // shared API interface
       trait MyApi{
@@ -51,7 +47,6 @@ object UpickleTests extends TestSuite{
       MyClient[MyApi].doThing(3, "lol").call().foreach(println)
     }
     'inheritedTraits{
-      import upickle._
 
       // It should also be possible to separate the API into several controllers that
       // only implement the logic of their corresponding protocols. The controllers are

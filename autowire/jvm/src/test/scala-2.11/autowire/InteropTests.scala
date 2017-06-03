@@ -1,15 +1,11 @@
 package autowire
-import utest._
-import scala.concurrent.Future
-import java.io.{ObjectInputStream, ByteArrayInputStream, ObjectOutputStream, ByteArrayOutputStream}
-import utest.framework.Tree
-import utest.framework.Test
-import utest.framework.ExecutionContext.RunNow
-import scala.reflect.ClassTag
-import utest._
-import scala.pickling._
-import json._
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+
 import org.objenesis.strategy.StdInstantiatorStrategy
+import utest._
+import utest.framework.ExecutionContext.RunNow
+
+import scala.reflect.ClassTag
 
 
 object InteropTests extends TestSuite{
@@ -34,7 +30,7 @@ object InteropTests extends TestSuite{
         }
         def routes = Server.route[Api](Controller)
       }
-      import Bundle.{Client, Server}
+      import Bundle.Client
 
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())
@@ -70,7 +66,7 @@ object InteropTests extends TestSuite{
         }
         def routes = Server.route[Api](Controller)
       }
-      import Bundle.{Client, Server}
+      import Bundle.Client
 
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())
@@ -104,7 +100,7 @@ object InteropTests extends TestSuite{
         }
         def routes = Server.route[Api](Controller)
       }
-      import Bundle.{Client, Server}
+      import Bundle.Client
 
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())

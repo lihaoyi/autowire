@@ -3,14 +3,14 @@ crossScalaVersions := Seq("2.10.4", "2.11.8", "2.12.0")
 val autowire = crossProject.settings(
   organization := "com.lihaoyi",
 
-  version := "0.2.6",
+  version := "0.3.0",
   name := "autowire",
   scalaVersion := "2.11.8",
   autoCompilerPlugins := true,
   addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.5"),
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "acyclic" % "0.1.5" % "provided",
-    "com.lihaoyi" %%% "utest" % "0.4.4" % "test",
+    "com.lihaoyi" %%% "utest" % "0.4.7" % "test",
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "com.lihaoyi" %%% "upickle" % "0.4.4" % "test"
   ) ++ (
@@ -26,7 +26,7 @@ val autowire = crossProject.settings(
   publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
 
   pomExtra :=
-    <url>https://github.com/lihaoyi/ajax</url>
+    <url>https://github.com/daxten/autowire</url>
       <licenses>
         <license>
           <name>MIT license</name>
@@ -65,7 +65,7 @@ val autowire = crossProject.settings(
     if (!scalaVersion.value.startsWith("2.11.")) Nil
     else Seq(
       "org.scala-lang" %% "scala-pickling" % "0.9.1" % "test",
-      "com.typesafe.play" %% "play-json" % "2.4.8" % "test"
+      "com.typesafe.play" %% "play-json" % "2.5.15" % "test"
     )
   }
 )
