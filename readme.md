@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Daxten/autowire.svg?branch=master)](https://travis-ci.org/Daxten/autowire)
+
 Autowire 0.3.0
 ==============
 
@@ -39,8 +41,14 @@ Getting Started
 Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS respectively:
 
 ```scala
-"com.lihaoyi" %% "autowire" % "0.3.0"
-"com.lihaoyi" %%% "autowire" % "0.3.0"
+resolvers in ThisBuild += Resolver.bintrayRepo("daxten", "maven")
+
+// For jvm/js shared project
+libraryDependencies += "de.daxten" %%% "autowire" % "0.3.0"
+
+// or explicitly inside jvm/js
+libraryDependencies += "de.daxten" %% "autowire" % "0.3.0"
+libraryDependencies += "de.daxten" %%% "autowire" % "0.3.0"
 ```
 
 It's only available for Scala.js 0.5.3+. Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
@@ -274,6 +282,12 @@ https://github.com/lihaoyi/workbench-example-app/tree/autowire
 
 Changelog
 =========
+
+0.3.0
+-----
+
+- `.call()` now uses an implicit `ExecutionContext` (this helps your compiler/IDE)
+
 
 0.2.6
 -----
