@@ -1,9 +1,9 @@
 val autowire = crossProject.settings(
   organization := "de.daxten",
-  version := "0.3.0",
+  version := "0.3.1",
   name := "autowire",
   scalaVersion := "2.11.11",
-  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.2", "2.13.0-M1"),
+  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.2"),
   autoCompilerPlugins := true,
   addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.5"),
   libraryDependencies ++= Seq(
