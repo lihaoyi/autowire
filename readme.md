@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/Daxten/autowire.svg?branch=master)](https://travis-ci.org/Daxten/autowire)
+[ ![Download](https://api.bintray.com/packages/daxten/maven/autowire/images/download.svg) ](https://bintray.com/daxten/maven/autowire/_latestVersion)
 
 Autowire 0.3.0
 ==============
