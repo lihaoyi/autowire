@@ -7,14 +7,9 @@ dist: trusty
 jdk:
   - oraclejdk8
 scala:
-  - 2.10.6
   - 2.11.11
   - 2.12.2
   - 2.13.0-M1
-matrix:
-  include:
-    - scala: 2.10.6
-      jdk: openjdk7
 
 # Taken from https://github.com/typelevel/cats/blob/master/.travis.yml
 cache:
