@@ -43,6 +43,11 @@ val autowire = crossProject.settings(
           <name>Li Haoyi</name>
           <url>https://github.com/lihaoyi</url>
         </developer>
+        <developer>
+          <id>daxten</id>
+          <name>Alexej Haak</name>
+          <url>https://github.com/daxten</url>
+        </developer>
       </developers>
 ).jsSettings(
     resolvers ++= Seq(
