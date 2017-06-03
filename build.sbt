@@ -1,7 +1,7 @@
 crossScalaVersions := Seq("2.10.4", "2.11.8", "2.12.0")
 
 val autowire = crossProject.settings(
-  organization := "com.lihaoyi",
+  organization := "de.daxten",
 
   version := "0.3.0",
   name := "autowire",
@@ -21,11 +21,13 @@ val autowire = crossProject.settings(
     )
   ),
   testFrameworks += new TestFramework("utest.runner.Framework"),
-  // Sonatype
+  // Bintray
   publishArtifact in Test := false,
-  publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
+  bintrayReleaseOnPublish in ThisBuild := false,
+  licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT")),
+  bintrayVcsUrl in ThisBuild := Some("git@github.com:daxten/autowire"),
 
-  pomExtra :=
+    pomExtra :=
     <url>https://github.com/daxten/autowire</url>
       <licenses>
         <license>
@@ -34,8 +36,8 @@ val autowire = crossProject.settings(
         </license>
       </licenses>
       <scm>
-        <url>git://github.com/lihaoyi/ajax.git</url>
-        <connection>scm:git://github.com/lihaoyi/ajax.git</connection>
+        <url>git://github.com/daxten/autowire</url>
+        <connection>scm:git://github.com/daxten/autowire.git</connection>
       </scm>
       <developers>
         <developer>
