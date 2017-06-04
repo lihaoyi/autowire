@@ -250,7 +250,7 @@ object Macros {
         case (q"$thing.$name", _) if name.toString.contains("$default$") => false
         case _ => true
       }
-        .map { case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write($t)"}
+        .map { case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write[${param.typeSignature}]($t)"}
 
     } yield {
       val fullPath = prePath ++ memPath
