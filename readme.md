@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/Daxten/autowire.svg?branch=master)](https://travis-ci.org/Daxten/autowire)
 [ ![Download](https://api.bintray.com/packages/daxten/maven/autowire/images/download.svg) ](https://bintray.com/daxten/maven/autowire/_latestVersion)
 
-Autowire 0.3.0
+Autowire 0.3.1
 ==============
 
 Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
@@ -45,11 +45,11 @@ Autowire is available at the following maven coordinates, for Scala-JVM and Scal
 resolvers in ThisBuild += Resolver.bintrayRepo("daxten", "maven")
 
 // For jvm/js shared project
-libraryDependencies += "de.daxten" %%% "autowire" % "0.3.0"
+libraryDependencies += "de.daxten" %%% "autowire" % "0.3.1"
 
 // or explicitly inside jvm/js
-libraryDependencies += "de.daxten" %% "autowire" % "0.3.0"
-libraryDependencies += "de.daxten" %%% "autowire" % "0.3.0"
+libraryDependencies += "de.daxten" %% "autowire" % "0.3.1"
+libraryDependencies += "de.daxten" %%% "autowire" % "0.3.1"
 ```
 
 It's only available for Scala.js 0.5.3+. Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
@@ -283,6 +283,11 @@ https://github.com/lihaoyi/workbench-example-app/tree/autowire
 
 Changelog
 =========
+
+0.3.1
+-----
+- explicitly specify generic type of write calls in client macro (see https://github.com/lihaoyi/autowire/issues/59)
+
 
 0.3.0
 -----
