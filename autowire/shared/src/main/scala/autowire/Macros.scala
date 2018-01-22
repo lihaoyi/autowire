@@ -43,6 +43,7 @@ object Macros {
         if !member.isSynthetic
         if member.isPublic
         if member.isTerm
+        if member.isAbstract
         memTerm = member.asTerm
         if memTerm.isMethod
       } yield {
