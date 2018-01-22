@@ -1,7 +1,7 @@
 package autowire
 
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import language.experimental.macros
 
 
@@ -16,16 +16,16 @@ object Internal{
    * call-Future extension method a chance to run first
    */
   trait LowPri {
-    implicit def clientCallable[T](t: T) = new Internal.ClientCallable[T]
+    implicit def clientCallable[T](t: T): ClientCallable[T] = new Internal.ClientCallable[T]
   }
 
   /**
    * A synthetic type purely meant to hold the `.call()` macro; gets
    * erased completely when the macro-implementation of `.call()` runs
    */
-  class ClientCallable[T]{
+  class ClientCallable[T] {
     @ScalaVersionStubs.compileTimeOnly(".call() method is synthetic and should not be used directly")
-    def call(): Future[T] = macro Macros.clientMacro[T]
+    def call()(implicit ec: ExecutionContext): Future[T] = macro Macros.clientMacro[T]
   }
 
   type FailMaybe = Either[Error.Param, Any]

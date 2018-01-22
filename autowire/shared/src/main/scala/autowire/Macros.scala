@@ -1,10 +1,9 @@
 package autowire
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.macros.Context
 import language.experimental.macros
 import acyclic.file
-
 import Core._
 
 object Macros {
@@ -146,9 +145,8 @@ object Macros {
   }
 
 
-  def clientMacro[Result]
-                 (c: Context)
-                 ()
+  def clientMacro[Result](c: Context)
+                 ()(ec: c.Expr[ExecutionContext])
                  (implicit r: c.WeakTypeTag[Result])
                  : c.Expr[Future[Result]] = {
 
