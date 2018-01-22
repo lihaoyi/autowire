@@ -3,8 +3,6 @@ package autowire
 import scala.concurrent.Future
 import scala.reflect.macros.Context
 import language.experimental.macros
-import acyclic.file
-
 import Core._
 
 object Macros {
@@ -29,16 +27,16 @@ object Macros {
 
   class MacroHelp[C <: Context](val c: C) {
     import c.universe._
-    def futurize(t: Tree, member: MethodSymbol) = {
-      if (member.returnType <:< c.typeOf[Future[_]]) t
+    def futurize(t: Tree, cls: Symbol, member: MethodSymbol, curCls: c.universe.Type) = {
+      if (member.returnType.asSeenFrom(curCls, cls) <:< c.typeOf[Future[_]]) t
       else q"scala.concurrent.Future($t)"
     }
 
-    def getValsOrMeths(curCls: Type): Iterable[Either[(c.Symbol, MethodSymbol), (c.Symbol, MethodSymbol)]] = {
+    def getValsOrMeths(curCls: Type): Iterable[Either[(c.Symbol, MethodSymbol), (c.Symbol, c.Symbol, MethodSymbol)]] = {
       def isAMemberOfAnyRef(member: Symbol) = weakTypeOf[AnyRef].members.exists(_.name == member.name)
-      val membersOfBaseAndParents: Iterable[Symbol] = curCls.declarations ++ curCls.baseClasses.map(_.asClass.toType.declarations).flatten
+      val membersOfBaseAndParents = curCls.baseClasses.flatMap(s => s.asClass.toType.decls.map(m => s -> m))
       val extractableMembers = for {
-        member <- membersOfBaseAndParents
+        (cls, member) <- membersOfBaseAndParents
         if !isAMemberOfAnyRef(member)
         if !member.isSynthetic
         if member.isPublic
@@ -47,24 +45,25 @@ object Macros {
         memTerm = member.asTerm
         if memTerm.isMethod
       } yield {
-        member -> memTerm.asMethod
+        (cls, member, memTerm.asMethod)
       }
 
-      extractableMembers flatMap { case (member, memTerm) =>
+      extractableMembers flatMap { case (cls, member, memTerm) =>
         if (memTerm.isGetter) {
           //This is a val (or a var-getter) so we will need to recur here
-          Seq(Left(member -> memTerm))
+          Seq(Left(member, memTerm))
         } else if (memTerm.isSetter || memTerm.isConstructor) {
           //Ignore setters and constructors
           Nil
         } else {
-          Seq(Right(member -> memTerm))
+          Seq(Right(cls, member, memTerm))
         }
       }
     }
 
     def extractMethod(
       pickleType: WeakTypeTag[_],
+      cls: c.Symbol,
       meth: MethodSymbol,
       prefixPath: Seq[String],
       memPath: Seq[String],
@@ -112,7 +111,7 @@ object Macros {
         q"$cur.${c.universe.newTermName(nex)}"
       }
 
-      val futurized = futurize(q"$memSel(..$nameNames)", meth)
+      val futurized = futurize(q"$memSel(..$nameNames)", cls, meth, curCls)
       val fullPath = prefixPath ++ memPath
       val frag = cq""" autowire.Core.Request(Seq(..$fullPath), $argName) =>
              autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
@@ -136,9 +135,9 @@ object Macros {
         case Left((m, t)) => Nil
           //Vals / Vars
           getAllRoutesForClass(pt, target, m.typeSignature, prefixPath, memPath :+ m.name.toString)
-        case Right((m, t)) =>
+        case Right((c, m, t)) =>
           //Methods
-          Seq(extractMethod(pt, t, prefixPath, memPath :+ m.name.toString, target, curCls))
+          Seq(extractMethod(pt, c, t, prefixPath, memPath :+ m.name.toString, target, curCls))
 
       }
     }
