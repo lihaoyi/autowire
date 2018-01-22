@@ -263,7 +263,7 @@ Limitations
 
 Autowire can only serialize and deserialize things that the chosen serialization library can. For example, if you choose to go with uPickle, this means most of the immutable data structures in the standard library and case classes, but circular data structures aren't supported, and arbitrary object graphs don't work. 
 
-Autowire does not support method overloading on the interfaces/traits used for making the RPCs.
+Autowire does not support method overloading and type parameters on the interfaces/traits used for making the RPCs.
  
 Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing. It is up to the developer using Autowire to decide how he wants to transport the serialized data back and forth, how he wants to respond to errors, etc.
 
