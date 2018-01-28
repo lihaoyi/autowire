@@ -3,6 +3,7 @@ import autowire.Macros
 import scala.concurrent.Future
 import language.experimental.macros
 import acyclic.file
+import scala.language.implicitConversions
 
 package object autowire extends autowire.Internal.LowPri {
   /**
