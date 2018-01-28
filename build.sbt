@@ -1,11 +1,14 @@
-crossScalaVersions := Seq("2.10.4", "2.11.8", "2.12.0")
+crossScalaVersions := Seq("2.11.12", "2.12.4")
 
 val autowire = crossProject.settings(
   organization := "com.lihaoyi",
 
-  version := "0.2.6",
+  version := "0.2.7-SNAPSHOT",
   name := "autowire",
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.12.4",
+  scalacOptions ++= Seq(
+     "-language:higherKinds"
+  ),
   autoCompilerPlugins := true,
   addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.5"),
   libraryDependencies ++= Seq(
@@ -13,12 +16,9 @@ val autowire = crossProject.settings(
     "com.lihaoyi" %%% "utest" % "0.4.4" % "test",
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "com.lihaoyi" %%% "upickle" % "0.4.4" % "test"
-  ) ++ (
-    if (!scalaVersion.value.startsWith("2.10.")) Nil
-    else Seq(
-      compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
-      "org.scalamacros" %% s"quasiquotes" % "2.0.0"
-    )
+  ) ++  Seq(
+    compilerPlugin("org.scalamacros" % s"paradise" % "2.1.1" cross CrossVersion.full),
+    "org.scalameta" %% s"quasiquotes" % "2.1.7" 
   ),
   testFrameworks += new TestFramework("utest.runner.Framework"),
   // Sonatype
