@@ -1,9 +1,11 @@
 package autowire
 
 import scala.concurrent.Future
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 import language.experimental.macros
 import Core._
+import acyclic.file
+
 
 object Macros {
 
@@ -69,7 +71,7 @@ object Macros {
       memPath: Seq[String],
       target: Expr[Any],
       curCls: c.universe.Type): c.universe.Tree = {
-      val flattenedArgLists = meth.paramss.flatten
+      val flattenedArgLists = meth.paramLists.flatten
       def hasDefault(i: Int) = {
         val defaultName = s"${meth.name}$$default$$${i + 1}"
         if (curCls.members.exists(_.name.toString == defaultName)) {
@@ -78,21 +80,20 @@ object Macros {
           None
         }
       }
-      val argName = c.fresh[TermName]("args")
+      val argName = c.freshName(TermName("args"))
       val args: Seq[Tree] = flattenedArgLists.zipWithIndex.map { case (arg, i) =>
         val default = hasDefault(i) match {
-          case Some(defaultName) => q"scala.util.Right(($target).${newTermName(defaultName)})"
+          case Some(defaultName) => q"scala.util.Right(($target).${TermName(defaultName)})"
           case None => q"scala.util.Left(autowire.Error.Param.Missing(${arg.name.toString}))"
         }
-        q"""autowire.Internal.read[$pickleType, ${arg.typeSignature}](
+        q"""autowire.Internal.read[$pickleType, ${arg.typeSignature.asSeenFrom(curCls, cls)}](
                  $argName,
                  $default,
                  ${arg.name.toString},
-                 ${c.prefix}.read[${arg.typeSignature}](_)
+                 ${c.prefix}.read[${arg.typeSignature.asSeenFrom(curCls, cls)}](_)
                )
              """
       }
-
 
       //val memSel = c.universe.newTermName(memPath.mkString("."))
 
@@ -102,13 +103,13 @@ object Macros {
 
       val nameNames: Seq[TermName] = flattenedArgLists.map(x => x.name.toTermName)
       val assignment = flattenedArgLists.foldLeft[Tree](q"Nil") { (old, next) =>
-        pq"scala.::(${next.name.toTermName}: ${next.typeSignature} @unchecked, $old)"
+        pq"scala.::(${next.name.toTermName}: ${next.typeSignature.asSeenFrom(curCls, cls)} @unchecked, $old)"
       }
 
 
 
       val memSel = memPath.foldLeft(q"($target)") { (cur, nex) =>
-        q"$cur.${c.universe.newTermName(nex)}"
+        q"$cur.${c.universe.TermName(nex)}"
       }
 
       val futurized = futurize(q"$memSel(..$nameNames)", cls, meth, curCls)
@@ -215,29 +216,28 @@ object Macros {
         .split('.')
         .toSeq
 
-      method = {
+      (clazz, method) = {
         // Look for method in the trait and in its base classes.
-        def findMember(tpe: Type, name: TermName): Option[Symbol] = {
-          (Iterator.single(tpe.declaration(name)) ++
-            tpe.baseClasses.iterator.map(_.asClass.toType.declaration(name)))
-            .find(_ != NoSymbol)
+        def findMember(tpe: Type, name: TermName): Option[(Symbol, Symbol)] = {
+          tpe.baseClasses.iterator.map(c => c -> c.asClass.toType.decl(name))
+            .find(_._2 != NoSymbol)
         }
 
-        def loop(path: List[String], tpe: Type, lastMem: Option[Symbol]): MethodSymbol = {
+        def loop(path: List[String], tpe: Type, lastMem: Option[(Symbol, Symbol)]): (Symbol, MethodSymbol) = {
           path match {
             case Nil =>
               lastMem match {
-                case Some(mem) if mem.isMethod => mem.asMethod
-                case Some(mem) => c.abort(c.enclosingPosition, s"Error while creating route proxy, expect method, $mem in $tpe")
+                case Some((clazz, mem)) if mem.isMethod => clazz -> mem.asMethod
+                case Some((_, mem)) => c.abort(c.enclosingPosition, s"Error while creating route proxy, expect method, $mem in $tpe")
                 case None => c.abort(c.enclosingPosition, s"Error while creating route proxy, expect missing member in $tpe")
               }
             case name :: rem =>
-              findMember(tpe, newTermName(name)) match {
+              findMember(tpe, TermName(name)) match {
                 case None =>
                   c.abort(c.enclosingPosition, s"Error while creating route proxy, unable to find $name in $tpe")
-                case Some(mem) =>
+                case Some((clazz, mem)) =>
                   val memTpe = mem.typeSignature.widen
-                  loop(rem, memTpe, Some(mem))
+                  loop(rem, memTpe, Some((clazz, mem)))
               }
           }
         }
@@ -246,13 +246,13 @@ object Macros {
       }
 
       pickled = args
-        .zip(method.paramss.flatten)
+        .zip(method.paramLists.flatten)
         .filter {
         case (Ident(name: TermName), _) => !deadNames.contains(name)
         case (q"$thing.$name", _) if name.toString.contains("$default$") => false
         case _ => true
       }
-        .map { case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write[${param.typeSignature}]($t)"}
+        .map { case (t, param: Symbol) => q"${param.name.toString} -> $proxy.self.write[${param.typeSignature.asSeenFrom(trtTpe, clazz)}]($t)"}
 
     } yield {
       val fullPath = prePath ++ memPath

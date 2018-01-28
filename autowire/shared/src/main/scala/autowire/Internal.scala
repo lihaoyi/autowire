@@ -3,6 +3,8 @@ package autowire
 
 import scala.concurrent.Future
 import language.experimental.macros
+import acyclic.file
+import scala.language.implicitConversions
 
 
 /**
