@@ -3,9 +3,8 @@ package autowire
 import scala.concurrent.Future
 import scala.reflect.macros.Context
 import language.experimental.macros
-import acyclic.file
-
 import Core._
+import cats.effect.IO
 
 object Macros {
 
@@ -31,12 +30,13 @@ object Macros {
     import c.universe._
     def futurize(t: Tree, member: MethodSymbol) = {
       if (member.returnType <:< c.typeOf[Future[_]]) t
+      else if (member.returnType <:< c.typeOf[IO[_]]) q"$t.unsafeToFuture()"
       else q"scala.concurrent.Future($t)"
     }
 
     def getValsOrMeths(curCls: Type): Iterable[Either[(c.Symbol, MethodSymbol), (c.Symbol, MethodSymbol)]] = {
       def isAMemberOfAnyRef(member: Symbol) = weakTypeOf[AnyRef].members.exists(_.name == member.name)
-      val membersOfBaseAndParents: Iterable[Symbol] = curCls.declarations ++ curCls.baseClasses.map(_.asClass.toType.declarations).flatten
+      val membersOfBaseAndParents: Iterable[Symbol] = curCls.declarations ++ curCls.baseClasses.flatMap(_.asClass.toType.declarations)
       val extractableMembers = for {
         member <- membersOfBaseAndParents
         if !isAMemberOfAnyRef(member)

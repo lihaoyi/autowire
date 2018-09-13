@@ -9,10 +9,11 @@ val autowire = crossProject.settings(
   autoCompilerPlugins := true,
   addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.5"),
   libraryDependencies ++= Seq(
-    "com.lihaoyi" %% "acyclic" % "0.1.5" % "provided",
-    "com.lihaoyi" %%% "utest" % "0.4.4" % "test",
+    "com.lihaoyi" %% "acyclic" % "0.1.5" % Provided,
+    "org.typelevel" %% "cats-effect" % "1.0.0" % Provided,
+    "com.lihaoyi" %%% "utest" % "0.4.4" % Test,
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    "com.lihaoyi" %%% "upickle" % "0.4.4" % "test"
+    "com.lihaoyi" %%% "upickle" % "0.4.4" % Test
   ) ++ (
     if (!scalaVersion.value.startsWith("2.10.")) Nil
     else Seq(
@@ -52,15 +53,15 @@ val autowire = crossProject.settings(
 ).jvmSettings(
   resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
   libraryDependencies ++= Seq(
-//    "org.scala-lang" %% "scala-pickling" % "0.9.1" % "test",
-    "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % "test"
-//    "com.typesafe.play" %% "play-json" % "2.4.8" % "test"
+//    "org.scala-lang" %% "scala-pickling" % "0.9.1" % Test,
+    "com.esotericsoftware.kryo" % "kryo" % "2.24.0" % Test
+//    "com.typesafe.play" %% "play-json" % "2.4.8" % Test
   ),
   libraryDependencies ++= {
     if (!scalaVersion.value.startsWith("2.11.")) Nil
     else Seq(
-      "org.scala-lang" %% "scala-pickling" % "0.9.1" % "test",
-      "com.typesafe.play" %% "play-json" % "2.4.8" % "test"
+      "org.scala-lang" %% "scala-pickling" % "0.9.1" % Test,
+      "com.typesafe.play" %% "play-json" % "2.4.8" % Test
     )
   }
 )
