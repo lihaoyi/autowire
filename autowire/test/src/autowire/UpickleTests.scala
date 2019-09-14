@@ -2,12 +2,17 @@ package autowire
 import utest._
 import utest.framework._
 import utest.framework.ExecutionContext.RunNow
-import upickle.Js
+import ujson.Value
 import upickle.default._
 import acyclic.file
-
+import upickle.default.macroRW
+import upickle.default.{ReadWriter => RW}
+import upickle.core.AbortException
+import ujson.ParseException
 
 object UpickleTests extends TestSuite{
+  implicit val rw: RW[Point] = macroRW
+
   object Bundle extends GenericClientServerBundle[String, upickle.default.Reader, upickle.default.Writer]{
     def write[T: upickle.default.Writer](t: T) = upickle.default.write(t)
     def read[T: upickle.default.Reader](t: String) = upickle.default.read[T](t)
@@ -188,18 +193,18 @@ object UpickleTests extends TestSuite{
         'keysInvalid - {
           * - check(Map("x" -> "[]", "ys" -> "234")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("x", upickle.Invalid.Data(Js.Arr(), _)),
-              Error.Param.Invalid("ys", upickle.Invalid.Data(Js.Num(234), _))
+              Error.Param.Invalid("x", AbortException("expected number got sequence", _,_,_,_,_)),
+              Error.Param.Invalid("ys", AbortException("expected sequence got number", _,_,_,_,_))
             ) =>
           }
-          * - check(Map("x" -> "123", "ys" -> "234")) {
+          * - check(Map("x" -> "123", "ys" -> "\"234\"")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("ys", upickle.Invalid.Data(Js.Num(234), _))
+              Error.Param.Invalid("ys", AbortException("expected sequence got string", _,_,_,_,_))
             ) =>
           }
           * - check(Map("x" -> "[]", "ys" -> "[234]")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("x", upickle.Invalid.Data(Js.Arr(), _))
+              Error.Param.Invalid("x", AbortException("expected number got sequence", _,_,_,_,_))
             ) =>
           }
         }
@@ -207,18 +212,18 @@ object UpickleTests extends TestSuite{
         'invalidJson - {
           * - check(Map("x" -> "]", "ys" -> "2}34")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("x", upickle.Invalid.Json(_, "]")),
-              Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
+              Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _,_,_)),
+              Error.Param.Invalid("ys", AbortException("expected sequence got number", _,_,_,_,_))
             ) =>
           }
           * - check(Map("x" -> "1", "ys" -> "2}34")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
+              Error.Param.Invalid("ys", AbortException("expected sequence got number", _,_,_,_,_))
             ) =>
           }
           * - check(Map("x" -> "]", "ys" -> "[234]")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("x", upickle.Invalid.Json(_, "]"))
+              Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _,_,_))
             ) =>
           }
         }
@@ -226,14 +231,14 @@ object UpickleTests extends TestSuite{
         'mix - {
           * - check(Map("x" -> "]")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("x", upickle.Invalid.Json(_, "]")),
+              Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _,_,_)),
               Error.Param.Missing("ys")
             ) =>
           }
           * - check(Map("x" -> "[1]", "ys" -> "2}34")) {
             case Error.InvalidInput(
-              Error.Param.Invalid("x", upickle.Invalid.Data(Js.Arr(Js.Num(1)), _)),
-              Error.Param.Invalid("ys", upickle.Invalid.Json(_, "2}34"))
+              Error.Param.Invalid("x", AbortException("expected number got sequence", _,_,_,_,_)),
+              Error.Param.Invalid("ys", AbortException("expected sequence got number", _,_,_,_,_))
             ) =>
           }
         }
