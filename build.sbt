@@ -26,7 +26,7 @@ val autowire = crossProject.settings(
   publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"),
 
   pomExtra :=
-    <url>https://github.com/lihaoyi/ajax</url>
+    <url>https://github.com/lihaoyi/autowire</url>
       <licenses>
         <license>
           <name>MIT license</name>
@@ -34,8 +34,8 @@ val autowire = crossProject.settings(
         </license>
       </licenses>
       <scm>
-        <url>git://github.com/lihaoyi/ajax.git</url>
-        <connection>scm:git://github.com/lihaoyi/ajax.git</connection>
+        <url>git://github.com/lihaoyi/autowire.git</url>
+        <connection>scm:git://github.com/lihaoyi/autowire.git</connection>
       </scm>
       <developers>
         <developer>
