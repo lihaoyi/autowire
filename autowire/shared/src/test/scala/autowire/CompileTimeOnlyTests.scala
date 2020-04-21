@@ -7,7 +7,6 @@ import utest._
 import upickle.default._
 import autowire._
 
-//This test should only be run in 2.11+ since 2.10 will not enforce this annotation
 object CompileTimeOnlyTests extends TestSuite{
   import scala.concurrent.ExecutionContext.Implicits.global
   // client-side implementation, and call-site

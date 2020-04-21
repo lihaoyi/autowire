@@ -4,7 +4,7 @@ val baseSettings = Seq(
   name := "autowire",
   version := "0.2.7",
   scalaVersion := "2.13.1",
-  crossScalaVersions := Seq("2.12.10", "2.13.1"),
+  crossScalaVersions := Seq("2.12.11", "2.13.1"),
   scmInfo := Some(ScmInfo(
     browseUrl = url("https://github.com/lihaoyi/autowire"),
     connection = "scm:git:git@github.com:lihaoyi/autowire.git"
@@ -19,22 +19,18 @@ val baseSettings = Seq(
   )
 )
 
-val autowire = _root_.sbtcrossproject.CrossPlugin.autoImport.crossProject(JSPlatform, JVMPlatform)
+val acyclicVersion = Def.setting{ if (scalaVersion.value == "2.11.12") "0.1.8" else "0.2.0" }
+
+val autowire = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .settings(baseSettings)
   .settings(
     autoCompilerPlugins := true,
-    addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.2.0"),
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "acyclic" % "0.2.0" % Provided,
+      "com.lihaoyi" %% "acyclic" % acyclicVersion.value % Provided,
+      compilerPlugin("com.lihaoyi" %% "acyclic" % acyclicVersion.value),
       "com.lihaoyi" %%% "utest" % "0.7.4" % Test,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "com.lihaoyi" %%% "upickle" % "1.0.0" % Test
-    ) ++ (
-      if (!scalaVersion.value.startsWith("2.10.")) Nil
-      else Seq(
-        compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
-        "org.scalamacros" %% s"quasiquotes" % "2.0.0"
-      )
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
     // Sonatype
@@ -43,7 +39,7 @@ val autowire = _root_.sbtcrossproject.CrossPlugin.autoImport.crossProject(JSPlat
 
   ).jsSettings(
       resolvers ++= Seq(
-        "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
+        "bintray-alexander_myltsev" at "https://dl.bintray.com/content/alexander-myltsev/maven"
       ),
       scalaJSStage in Test := FullOptStage,
       scalacOptions += {
@@ -55,11 +51,12 @@ val autowire = _root_.sbtcrossproject.CrossPlugin.autoImport.crossProject(JSPlat
         s"-P:scalajs:mapSourceURI:$a->$g/"
       }
   ).jvmSettings(
-    resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
+    resolvers += "Typesafe Repo" at "https://repo.typesafe.com/typesafe/releases/",
     libraryDependencies ++= Seq(
       "com.esotericsoftware" % "kryo" % "5.0.0-RC5" % Test
     )
+  ).nativeSettings(
+    scalaVersion := "2.11.12",
+    crossScalaVersions := Seq("2.11.12"),
+    nativeLinkStubs := true
   )
-
-lazy val autowireJS = autowire.js
-lazy val autowireJVM = autowire.jvm
