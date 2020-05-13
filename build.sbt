@@ -3,8 +3,8 @@ val baseSettings = Seq(
   organization := "com.lihaoyi",
   name := "autowire",
   version := "0.2.7",
-  scalaVersion := "2.13.1",
-  crossScalaVersions := Seq("2.12.10", "2.13.1"),
+  scalaVersion := "2.13.2",
+  crossScalaVersions := Seq("2.12.11", "2.13.2"),
   scmInfo := Some(ScmInfo(
     browseUrl = url("https://github.com/lihaoyi/autowire"),
     connection = "scm:git:git@github.com:lihaoyi/autowire.git"
@@ -28,7 +28,7 @@ val autowire = _root_.sbtcrossproject.CrossPlugin.autoImport.crossProject(JSPlat
       "com.lihaoyi" %% "acyclic" % "0.2.0" % Provided,
       "com.lihaoyi" %%% "utest" % "0.7.4" % Test,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.lihaoyi" %%% "upickle" % "1.0.0" % Test
+      "com.lihaoyi" %%% "upickle" % "1.1.0" % Test
     ) ++ (
       if (!scalaVersion.value.startsWith("2.10.")) Nil
       else Seq(

@@ -79,10 +79,10 @@ object Macros {
           None
         }
       }
-      val argName = c.fresh[TermName]("args")
+      val argName = c.freshName[TermName](TermName("args"))
       val args: Seq[Tree] = flattenedArgLists.zipWithIndex.map { case (arg, i) =>
         val default = hasDefault(i) match {
-          case Some(defaultName) => q"scala.util.Right(($target).${newTermName(defaultName)})"
+          case Some(defaultName) => q"scala.util.Right(($target).${TermName(defaultName)})"
           case None => q"scala.util.Left(autowire.Error.Param.Missing(${arg.name.toString}))"
         }
         q"""autowire.Internal.read[$pickleType, ${arg.typeSignature}](
