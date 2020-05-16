@@ -29,9 +29,10 @@ object Macros {
 
   class MacroHelp[C <: Context](val c: C) {
     import c.universe._
-    def futurize(t: Tree, member: MethodSymbol) = {
-      if (member.returnType <:< c.typeOf[Future[_]]) t
-      else q"scala.concurrent.Future($t)"
+    def futurize(t: Tree, member: MethodSymbol, preCallOp: Option[c.Expr[() => Unit]]) = {
+      val actualCallTree = preCallOp.map(pco => q"{$pco(); $t}").getOrElse(t)
+      if (member.returnType <:< c.typeOf[Future[_]]) actualCallTree
+      else q"scala.concurrent.Future($actualCallTree)"
     }
 
     def getValsOrMeths(curCls: Type): Iterable[Either[(c.Symbol, MethodSymbol), (c.Symbol, MethodSymbol)]] = {
@@ -69,7 +70,8 @@ object Macros {
       prefixPath: Seq[String],
       memPath: Seq[String],
       target: Expr[Any],
-      curCls: c.universe.Type): c.universe.Tree = {
+      curCls: c.universe.Type,
+      preCallOp: Option[c.Expr[() => Unit]]): c.universe.Tree = {
       val flattenedArgLists = meth.paramss.flatten
       def hasDefault(i: Int) = {
         val defaultName = s"${meth.name}$$default$$${i + 1}"
@@ -112,7 +114,7 @@ object Macros {
         q"$cur.${c.universe.newTermName(nex)}"
       }
 
-      val futurized = futurize(q"$memSel(..$nameNames)", meth)
+      val futurized = futurize(q"$memSel(..$nameNames)", meth, preCallOp)
       val fullPath = prefixPath ++ memPath
       val frag = cq""" autowire.Core.Request(Seq(..$fullPath), $argName) =>
              autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
@@ -127,6 +129,7 @@ object Macros {
     def getAllRoutesForClass(
       pt: WeakTypeTag[_],
       target: Expr[Any],
+      preCallOp: Option[Expr[() => Unit]],
       curCls: Type,
       prefixPath: Seq[String],
       memPath: Seq[String]): Iterable[c.universe.Tree] = {
@@ -135,10 +138,10 @@ object Macros {
       getValsOrMeths(curCls).flatMap {
         case Left((m, t)) => Nil
           //Vals / Vars
-          getAllRoutesForClass(pt, target, m.typeSignature, prefixPath, memPath :+ m.name.toString)
+          getAllRoutesForClass(pt, target, preCallOp, m.typeSignature, prefixPath, memPath :+ m.name.toString)
         case Right((m, t)) =>
           //Methods
-          Seq(extractMethod(pt, t, prefixPath, memPath :+ m.name.toString, target, curCls))
+          Seq(extractMethod(pt, t, prefixPath, memPath :+ m.name.toString, target, curCls, preCallOp))
 
       }
     }
@@ -271,20 +274,35 @@ object Macros {
     }
   }
 
-  def routeMacro[Trait, PickleType]
-                (c: Context)
-                (target: c.Expr[Trait])
-                (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
-                : c.Expr[Router[PickleType]] = {
+  protected def generateRoute[Trait, PickleType]
+                             (c: Context)
+                             (target: c.Expr[Trait], preCallOp: Option[c.Expr[() => Unit]])
+                             (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+                             : c.Expr[Router[PickleType]] = {
     import c.universe._
     val help = new MacroHelp[c.type](c)
     val topClass = weakTypeOf[Trait]
-    val routes = help.getAllRoutesForClass(pt, target, topClass, topClass.typeSymbol.fullName.toString.split('.').toSeq, Nil).toList
+    val routes = help.getAllRoutesForClass(pt, target, preCallOp, topClass, topClass.typeSymbol.fullName.toString.split('.').toSeq, Nil).toList
 
     val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
     c.Expr(res)
   }
 
+  def routeMacro[Trait, PickleType]
+                (c: Context)
+                (target: c.Expr[Trait])
+                (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+                : c.Expr[Router[PickleType]] = {
+    generateRoute(c)(target, None)
+  }
+
+  def routeWithPreCallOpMacro[Trait, PickleType]
+                (c: Context)
+                (target: c.Expr[Trait], preCallOp: c.Expr[() => Unit])
+                (implicit t: c.WeakTypeTag[Trait], pt: c.WeakTypeTag[PickleType])
+                : c.Expr[Router[PickleType]] = {
+    generateRoute(c)(target, Some(preCallOp))
+  }
 
 }
 

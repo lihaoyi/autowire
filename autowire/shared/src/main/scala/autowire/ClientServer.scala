@@ -41,11 +41,18 @@ case class ClientProxy[Trait,
 trait Server[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, Reader, Writer] {
   type Request = Core.Request[PickleType]
   type Router = Core.Router[PickleType]
+
   /**
    * A macro that generates a `Router` PartialFunction which will dispatch incoming
    * [[Requests]] to the relevant method on [[Trait]]
    */
   def route[Trait](target: Trait): Router = macro Macros.routeMacro[Trait, PickleType]
+
+  /**
+   * A macro that generates a `Router` PartialFunction which will dispatch incoming
+   * [[Requests]] to the relevant method on [[Trait]]
+   */
+  def route[Trait](target: Trait, preCallOp: () => Unit): Router = macro Macros.routeWithPreCallOpMacro[Trait, PickleType]
 
 }
 
