@@ -17,10 +17,10 @@ val baseSettings = Seq(
     name = "Li Haoyi",
     url = url("https://github.com/lihaoyi")
   ),
-  scalacOptions += "-deprecation"
+  scalacOptions ++= Seq("-deprecation", "-feature")
 )
 
-val autowire = _root_.sbtcrossproject.CrossPlugin.autoImport.crossProject(JSPlatform, JVMPlatform)
+val autowire = crossProject(JSPlatform, JVMPlatform)
   .settings(baseSettings)
   .settings(
     autoCompilerPlugins := true,

@@ -2,7 +2,7 @@ import autowire.Macros
 
 import scala.concurrent.Future
 import language.experimental.macros
-import acyclic.file
+import scala.language.implicitConversions
 
 package object autowire extends autowire.Internal.LowPri {
   /**
@@ -24,7 +24,8 @@ package object autowire extends autowire.Internal.LowPri {
    * method-call and turn it into a real RPC.
    */
 
-  implicit def clientFutureCallable[T](t: Future[T]) = new Internal.ClientCallable[T]
+  implicit def clientFutureCallable[T](t: Future[T]): Internal.ClientCallable[T] =
+    new Internal.ClientCallable[T]
   /**
    * Helper implicit to make sure that any calls to methods on [[ClientProxy]]
    * are immediately followed by a `.call()` call
@@ -32,6 +33,6 @@ package object autowire extends autowire.Internal.LowPri {
 
   @ScalaVersionStubs.compileTimeOnly("You have forgotten to append .call() to the end of an autowire call.")
   implicit def unwrapClientProxy[Trait, PickleType, Reader[_], Writer[_]]
-                                (w: ClientProxy[Trait, PickleType, Reader, Writer]): Trait = ???
+  (w: ClientProxy[Trait, PickleType, Reader, Writer]): Trait = ???
 }
 

@@ -22,11 +22,11 @@ object Core {
    *             exactly match the default value are omitted, and are
    *             simply re-constituted by the receiver.
    */
-  case class Request[PickleType](path : Seq[String], args: Map[String, PickleType])
+  case class Request[PickleType](path: Seq[String], args: Map[String, PickleType])
 }
 
 trait Error extends Exception
-object Error{
+object Error {
   /**
    * Signifies that something went wrong when de-serializing the
    * raw input into structured data.
@@ -34,10 +34,10 @@ object Error{
    * This can contain multiple exceptions, one for each parameter.
    */
   case class InvalidInput(exs: Param*) extends Exception with Error {
-    override def toString() = exs.mkString("InvalidInput(\n  ", "\n  ", "\n)")
+    override def toString: String = exs.mkString("InvalidInput(\n  ", "\n  ", "\n)")
   }
   sealed trait Param
-  object Param{
+  object Param {
 
     /**
      * Some parameter was missing from the input.

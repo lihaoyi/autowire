@@ -20,7 +20,7 @@ object UpickleTests extends TestSuite {
   import Bundle.{Client, Server}
   import utest.PlatformShims.await
 
-  val tests = utest.Tests {
+  val tests: Tests = utest.Tests {
     test("example") {
       // shared API interface
       trait MyApi {
@@ -191,9 +191,11 @@ object UpickleTests extends TestSuite {
             Error.Param.Missing("ys")
             ) =>
           }
+
           * - check(Map("x" -> "123")) {
             case Error.InvalidInput(Error.Param.Missing("ys")) =>
           }
+
           * - check(Map("ys" -> "[123]")) {
             case Error.InvalidInput(Error.Param.Missing("x")) =>
           }
@@ -206,11 +208,13 @@ object UpickleTests extends TestSuite {
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
+
           * - check(Map("x" -> "123", "ys" -> "234")) {
             case Error.InvalidInput(
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
+
           * - check(Map("x" -> "[]", "ys" -> "[234]")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", AbortException("expected number got sequence", _, _, _, _))
@@ -225,11 +229,13 @@ object UpickleTests extends TestSuite {
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
+
           * - check(Map("x" -> "1", "ys" -> "2}34")) {
             case Error.InvalidInput(
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
+
           * - check(Map("x" -> "]", "ys" -> "[234]")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _, _, _))
@@ -244,6 +250,7 @@ object UpickleTests extends TestSuite {
             Error.Param.Missing("ys")
             ) =>
           }
+
           * - check(Map("x" -> "[1]", "ys" -> "2}34")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", AbortException("expected number got sequence", _, _, _, _)),

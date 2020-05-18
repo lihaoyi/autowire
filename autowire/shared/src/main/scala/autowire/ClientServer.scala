@@ -2,6 +2,7 @@ package autowire
 
 import scala.concurrent.Future
 import scala.language.experimental.macros
+
 /**
  * A client to make autowire'd function calls to a particular interface.
  * A single client can only make calls to one interface, but it's not a
@@ -16,7 +17,8 @@ trait Client[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, R
    * @tparam Trait The interface that this autowire client makes its requests
    *               against.
    */
-  def apply[Trait] = ClientProxy[Trait, PickleType, Reader, Writer](this)
+  def apply[Trait]: ClientProxy[Trait, PickleType, Reader, Writer] =
+    ClientProxy[Trait, PickleType, Reader, Writer](this)
 
   /**
    * A method for you to override, that actually performs the heavy
@@ -32,11 +34,9 @@ trait Client[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, R
  * followed by a `.call()` call) will turn into an RPC using the original
  * [[Client]]
  */
-case class ClientProxy[Trait,
-                       PickleType,
-                       Reader[_],
-                       Writer[_]]
-                      (self: Client[PickleType, Reader, Writer])
+case class ClientProxy[Trait, PickleType, Reader[_], Writer[_]](
+  self: Client[PickleType, Reader, Writer]
+)
 
 trait Server[PickleType, Reader[_], Writer[_]] extends Serializers[PickleType, Reader, Writer] {
   type Request = Core.Request[PickleType]
