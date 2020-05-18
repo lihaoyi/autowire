@@ -50,7 +50,7 @@ object Macros {
         member -> memTerm.asMethod
       }
 
-      extractableMembers flatMap { case (member, memTerm) =>
+      extractableMembers.toList.distinct flatMap { case (member, memTerm) =>
         if (memTerm.isGetter) {
           //This is a val (or a var-getter) so we will need to recur here
           Seq(Left(member -> memTerm))
