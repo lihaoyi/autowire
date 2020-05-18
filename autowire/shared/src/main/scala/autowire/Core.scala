@@ -33,7 +33,9 @@ object Error{
    *
    * This can contain multiple exceptions, one for each parameter.
    */
-  case class InvalidInput(exs: Param*) extends Exception with Error
+  case class InvalidInput(exs: Param*) extends Exception with Error {
+    override def toString() = exs.mkString("InvalidInput(\n  ", "\n  ", "\n)")
+  }
   sealed trait Param
   object Param{
 
