@@ -38,14 +38,12 @@ object Macros {
     def getValsOrMeths(curCls: Type): Iterable[Either[(c.Symbol, MethodSymbol), (c.Symbol, MethodSymbol)]] = {
       def isAMemberOfAnyRef(member: Symbol) = weakTypeOf[AnyRef].members.exists(_.name == member.name)
       val membersOfBaseAndParents: Iterable[Symbol] = curCls.decls ++ curCls.baseClasses.flatMap(_.asClass.toType.decls)
-
       val extractableMembers = for {
         member <- membersOfBaseAndParents
         if !isAMemberOfAnyRef(member)
         if !member.isSynthetic
         if member.isPublic
         if member.isTerm
-        if member.isAbstract
         memTerm = member.asTerm
         if memTerm.isMethod
       } yield {

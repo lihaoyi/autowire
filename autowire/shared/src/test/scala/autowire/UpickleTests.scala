@@ -61,7 +61,10 @@ object UpickleTests extends TestSuite {
       // combined using the Cake pattern.
 
       trait BookProtocol {
-        def bookList(): Seq[String]
+        // Allow dummy implementations to allow extending API from Client
+        // without having to implement methods or being abstract
+        // This reverses pull request #58 (https://github.com/lihaoyi/autowire/pull/58)
+        def bookList(): Seq[String] = ???
       }
 
       trait ArticleProtocol {
@@ -71,7 +74,7 @@ object UpickleTests extends TestSuite {
       trait Protocol extends BookProtocol with ArticleProtocol
 
       trait BookController extends BookProtocol {
-        def bookList(): Seq[String] = Seq("Best Book")
+        override def bookList(): Seq[String] = Seq("Best Book")
       }
 
       trait ArticleController extends ArticleProtocol {
@@ -136,27 +139,25 @@ object UpickleTests extends TestSuite {
     }
 
     test("compilationFailures") - {
-      * - compileError("123.call()").check(
+      test - compileError("123.call()").check(
         """
-          |      * - compileError("123.call()").check(
-          |                        ^
+          |      test - compileError("123.call()").check(
+          |                           ^
         """.stripMargin,
         "You can't call the .call() method on 123"
       )
-
-      * - compileError("Client[Api].add(1, 2, 3).toString.call()").check(
+      test - compileError("Client[Api].add(1, 2, 3).toString.call()").check(
         """
-          |      * - compileError("Client[Api].add(1, 2, 3).toString.call()").check(
-          |                                                              ^
+          |      test - compileError("Client[Api].add(1, 2, 3).toString.call()").check(
+          |                                                                 ^
         """.stripMargin,
         "You can't call the .call() method",
         "add(1, 2, 3).toString()"
       )
-
-      * - compileError("Client[Api].fail1().call()").check(
+      test - compileError("Client[Api].fail1().call()").check(
         """
-          |      * - compileError("Client[Api].fail1().call()").check(
-          |                                    ^
+          |      test - compileError("Client[Api].fail1().call()").check(
+          |                                       ^
         """.stripMargin,
         "value fail1 is not a member of autowire.ClientProxy"
       )
