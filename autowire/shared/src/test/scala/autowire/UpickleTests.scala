@@ -3,17 +3,18 @@ package autowire
 import autowire.Core.Request
 import ujson.ParseException
 import upickle.core.AbortException
-import utest._
-import utest.framework.ExecutionContext.RunNow
 import upickle.default._
+import utest.framework.ExecutionContext.RunNow
+import utest._
+import scala.concurrent.Future
 
 
 object UpickleTests extends TestSuite {
 
   object Bundle extends GenericClientServerBundle[String, upickle.default.Reader, upickle.default.Writer] {
-    def write[T: upickle.default.Writer](t: T) = upickle.default.write(t)
-    def read[T: upickle.default.Reader](t: String) = upickle.default.read[T](t)
-    def routes = Server.route[Api](Controller)
+    def write[T: upickle.default.Writer](t: T): String = upickle.default.write(t)
+    def read[T: upickle.default.Reader](t: String): T = upickle.default.read[T](t)
+    def routes: Bundle.Server.Router = Server.route[Api](Controller)
   }
 
   import Bundle.{Client, Server}
@@ -28,21 +29,21 @@ object UpickleTests extends TestSuite {
 
       // server-side implementation, and router
       object MyApiImpl extends MyApi {
-        def doThing(i: Int, s: String) = Seq.fill(i)(s)
+        def doThing(i: Int, s: String): Seq[String] = Seq.fill(i)(s)
       }
       object MyServer extends autowire.Server[String, upickle.default.Reader, upickle.default.Writer] {
-        def write[Result: Writer](r: Result) = upickle.default.write(r)
-        def read[Result: Reader](p: String) = upickle.default.read[Result](p)
+        def write[Result: Writer](r: Result): String = upickle.default.write(r)
+        def read[Result: Reader](p: String): Result = upickle.default.read[Result](p)
 
-        val routes = MyServer.route[MyApi](MyApiImpl)
+        val routes: MyServer.Router = MyServer.route[MyApi](MyApiImpl)
       }
 
       // client-side implementation, and call-site
       object MyClient extends autowire.Client[String, upickle.default.Reader, upickle.default.Writer] {
-        def write[Result: Writer](r: Result) = upickle.default.write(r)
-        def read[Result: Reader](p: String) = upickle.default.read[Result](p)
+        def write[Result: Writer](r: Result): String = upickle.default.write(r)
+        def read[Result: Reader](p: String): Result = upickle.default.read[Result](p)
 
-        override def doCall(req: Request) = {
+        override def doCall(req: Request): Future[String] = {
           req ==> Request(
             List("autowire", "UpickleTests", "MyApi", "doThing"),
             Map("i" -> "3", "s" -> "\"lol\"")
@@ -82,17 +83,18 @@ object UpickleTests extends TestSuite {
         with ArticleController
 
       object MyServer extends autowire.Server[String, upickle.default.Reader, upickle.default.Writer] {
-        def write[Result: Writer](r: Result) = upickle.default.write(r)
-        def read[Result: Reader](p: String) = upickle.default.read[Result](p)
+        def write[Result: Writer](r: Result): String = upickle.default.write(r)
+        def read[Result: Reader](p: String): Result = upickle.default.read[Result](p)
 
-        val routes = MyServer.route[Protocol](Controller)
+        val routes: MyServer.Router = MyServer.route[Protocol](Controller)
       }
 
       object MyClient extends autowire.Client[String, upickle.default.Reader, upickle.default.Writer] {
-        def write[Result: Writer](r: Result) = upickle.default.write(r)
-        def read[Result: Reader](p: String) = upickle.default.read[Result](p)
+        def write[Result: Writer](r: Result): String = upickle.default.write(r)
+        def read[Result: Reader](p: String): Result = upickle.default.read[Result](p)
 
-        override def doCall(req: Request) = {
+        override def doCall(req: Request): Future[String] = {
+          // (only for bookList call...)
           req ==> Request(
             List("autowire", "UpickleTests", "Protocol", "bookList"),
             Map()
@@ -170,7 +172,7 @@ object UpickleTests extends TestSuite {
       }
 
       test("inputError") {
-        def check(input: Map[String, String])(expectedError: PartialFunction[Throwable, Unit]) = {
+        def check(input: Map[String, String])(expectedError: PartialFunction[Throwable, Unit]): Unit = {
           val badRequest = Core.Request(
             Seq("autowire", "Api", "multiply"),
             input
@@ -261,27 +263,26 @@ object UpickleTests extends TestSuite {
       }
 
       class MyOtherApiImpl(meaningOfLife: Int) extends MyApi {
-        def doThing(i: Int, s: String) = Seq.fill(i)(s + meaningOfLife.toString)
-        def doThingTwo(i: Int, s: String) = Seq.fill(i)(s + meaningOfLife.toString)
+        def doThing(i: Int, s: String): Seq[String] = Seq.fill(i)(s + meaningOfLife.toString)
+        def doThingTwo(i: Int, s: String): Seq[String] = Seq.fill(i)(s + meaningOfLife.toString)
       }
 
       object MyServer extends autowire.Server[String, upickle.default.Reader, upickle.default.Writer] {
-        def write[Result: Writer](r: Result) = upickle.default.write(r)
-        def read[Result: Reader](p: String) = upickle.default.read[Result](p)
+        def write[Result: Writer](r: Result): String = upickle.default.write(r)
+        def read[Result: Reader](p: String): Result = upickle.default.read[Result](p)
 
-        val routes1 = MyServer.route[MyApi](new MyOtherApiImpl(42))
-
-        val anApi = new MyOtherApiImpl(1)
-        val routes2 = MyServer.route[MyApi](anApi)
+        val routes1: MyServer.Router = MyServer.route[MyApi](new MyOtherApiImpl(42))
+        val anApi  : MyOtherApiImpl  = new MyOtherApiImpl(1)
+        val routes2: MyServer.Router = MyServer.route[MyApi](anApi)
 
         def anApiDef(inp: Int) = new MyOtherApiImpl(inp)
-        val routes3 = MyServer.route[MyApi](anApiDef(2))
+        val routes3: MyServer.Router = MyServer.route[MyApi](anApiDef(2))
       }
       class UpickleClient(pf: PartialFunction[MyServer.Request, concurrent.Future[String]])
         extends autowire.Client[String, upickle.default.Reader, upickle.default.Writer] {
-        def write[Result: Writer](r: Result) = upickle.default.write(r)
-        def read[Result: Reader](p: String) = upickle.default.read[Result](p)
-        def doCall(req: Request) = pf(req)
+        def write[Result: Writer](r: Result): String = upickle.default.write(r)
+        def read[Result: Reader](p: String): Result = upickle.default.read[Result](p)
+        def doCall(req: Request): Future[String] = pf(req)
       }
       object Client1 extends UpickleClient(MyServer.routes1)
 
