@@ -21,7 +21,7 @@ object UpickleTests extends TestSuite {
   import utest.PlatformShims.await
 
   val tests: Tests = utest.Tests {
-    test("example") {
+    test("example") - {
       // shared API interface
       trait MyApi {
         def doThing(i: Int, s: String): Seq[String]
@@ -55,7 +55,7 @@ object UpickleTests extends TestSuite {
       await(MyClient[MyApi].doThing(3, "lol").call()) ==> List("lol", "lol", "lol")
     }
 
-    test("inheritedTraits") {
+    test("inheritedTraits") - {
       // It should also be possible to separate the API into several controllers that
       // only implement the logic of their corresponding protocols. The controllers are
       // combined using the Cake pattern.
@@ -106,7 +106,7 @@ object UpickleTests extends TestSuite {
       await(MyClient[Protocol].bookList().call()) ==> Seq("Best Book")
     }
 
-    test("basicCalls") {
+    test("basicCalls") - {
       val res1 = await(Client[Api].add(1, 2, 3).call())
       val res2 = await(Client[Api].add(1).call())
       val res3 = await(Client[Api].add(1, 2).call())
@@ -124,18 +124,18 @@ object UpickleTests extends TestSuite {
       Bundle.transmitted.last
     }
 
-    test("aliased") {
+    test("aliased") - {
       val api = Client[Api]
       val res = await(api.add(1, 2, 4).call())
       assert(res == "1+2+4")
     }
 
-    test("async") {
+    test("async") - {
       val res5 = await(Client[Api].sloww(Seq("omgomg", "wtf")).call())
       assert(res5 == Seq(6, 3))
     }
 
-    test("compilationFailures") {
+    test("compilationFailures") - {
       * - compileError("123.call()").check(
         """
           |      * - compileError("123.call()").check(
@@ -162,7 +162,7 @@ object UpickleTests extends TestSuite {
       )
     }
 
-    test("runtimeFailures") {
+    test("runtimeFailures") - {
       test("noSuchRoute") {
         val badRequest = Core.Request[String](Seq("omg", "wtf", "bbq"), Map.empty)
         assert(!Server.routes.isDefinedAt(badRequest))
@@ -171,7 +171,7 @@ object UpickleTests extends TestSuite {
         }
       }
 
-      test("inputError") {
+      test("inputError") - {
         def check(input: Map[String, String])(expectedError: PartialFunction[Throwable, Unit]): Unit = {
           val badRequest = Core.Request(
             Seq("autowire", "Api", "multiply"),
@@ -184,38 +184,34 @@ object UpickleTests extends TestSuite {
           assert(expectedError.isDefinedAt(error))
         }
 
-        test("keysMissing") {
-          * - check(Map.empty) {
+        test("keysMissing") - {
+          test - check(Map.empty) {
             case Error.InvalidInput(
             Error.Param.Missing("x"),
             Error.Param.Missing("ys")
             ) =>
           }
-
-          * - check(Map("x" -> "123")) {
+          test - check(Map("x" -> "123")) {
             case Error.InvalidInput(Error.Param.Missing("ys")) =>
           }
-
-          * - check(Map("ys" -> "[123]")) {
+          test - check(Map("ys" -> "[123]")) {
             case Error.InvalidInput(Error.Param.Missing("x")) =>
           }
         }
 
         test("keysInvalid") - {
-          * - check(Map("x" -> "[]", "ys" -> "234")) {
+          test - check(Map("x" -> "[]", "ys" -> "234")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", AbortException("expected number got sequence", _, _, _, _)),
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
-
-          * - check(Map("x" -> "123", "ys" -> "234")) {
+          test - check(Map("x" -> "123", "ys" -> "234")) {
             case Error.InvalidInput(
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
-
-          * - check(Map("x" -> "[]", "ys" -> "[234]")) {
+          test - check(Map("x" -> "[]", "ys" -> "[234]")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", AbortException("expected number got sequence", _, _, _, _))
             ) =>
@@ -223,20 +219,18 @@ object UpickleTests extends TestSuite {
         }
 
         test("invalidJson") - {
-          * - check(Map("x" -> "]", "ys" -> "2}34")) {
+          test - check(Map("x" -> "]", "ys" -> "2}34")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _, _, _)),
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
-
-          * - check(Map("x" -> "1", "ys" -> "2}34")) {
+          test - check(Map("x" -> "1", "ys" -> "2}34")) {
             case Error.InvalidInput(
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
-
-          * - check(Map("x" -> "]", "ys" -> "[234]")) {
+          test - check(Map("x" -> "]", "ys" -> "[234]")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _, _, _))
             ) =>
@@ -244,14 +238,13 @@ object UpickleTests extends TestSuite {
         }
 
         test("mix") - {
-          * - check(Map("x" -> "]")) {
+          test - check(Map("x" -> "]")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _, _, _)),
             Error.Param.Missing("ys")
             ) =>
           }
-
-          * - check(Map("x" -> "[1]", "ys" -> "2}34")) {
+          test - check(Map("x" -> "[1]", "ys" -> "2}34")) {
             case Error.InvalidInput(
             Error.Param.Invalid("x", AbortException("expected number got sequence", _, _, _, _)),
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
