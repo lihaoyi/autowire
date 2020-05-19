@@ -30,15 +30,16 @@ object Macros {
 
     import c.universe._
 
-    def futurize(t: Tree, member: MethodSymbol): c.universe.Tree = {
+    def futurize(t: Tree, member: MethodSymbol): Tree = {
       if (member.returnType <:< c.typeOf[Future[_]]) t
       else q"scala.concurrent.Future($t)"
     }
 
-    def getValsOrMeths(curCls: Type): Iterable[Either[(c.Symbol, MethodSymbol), (c.Symbol, MethodSymbol)]] = {
+    def getValsOrMeths(curCls: Type): Iterable[Either[(Symbol, MethodSymbol), (Symbol, MethodSymbol)]] = {
       def isAMemberOfAnyRef(member: Symbol) = weakTypeOf[AnyRef].members.exists(_.name == member.name)
       val membersOfBaseAndParents: Iterable[Symbol] = curCls.decls ++ curCls.baseClasses.flatMap(_.asClass.toType.decls)
-      val extractableMembers = for {
+
+      val extractableMembers: Iterable[(Symbol, MethodSymbol)] = for {
         member <- membersOfBaseAndParents
         if !isAMemberOfAnyRef(member)
         if !member.isSynthetic
@@ -69,7 +70,7 @@ object Macros {
       prefixPath: Seq[String],
       memPath: Seq[String],
       target: Expr[Any],
-      curCls: c.universe.Type): c.universe.Tree = {
+      curCls: Type): Tree = {
       val flattenedArgLists = meth.paramLists.flatten
       def hasDefault(i: Int) = {
         val defaultName = s"${meth.name}$$default$$${i + 1}"
@@ -79,46 +80,49 @@ object Macros {
           None
         }
       }
-      val argName         = c.freshName[TermName](TermName("args"))
-      val args: Seq[Tree] = flattenedArgLists.zipWithIndex.map { case (arg, i) =>
+      val argName: TermName  = c.freshName[TermName](TermName("args"))
+      val args   : Seq[Tree] = flattenedArgLists.zipWithIndex.map { case (arg, i) =>
         val default = hasDefault(i) match {
           case Some(defaultName) => q"scala.util.Right(($target).${TermName(defaultName)})"
           case None              => q"scala.util.Left(autowire.Error.Param.Missing(${arg.name.toString}))"
         }
         q"""autowire.Internal.read[$pickleType, ${arg.typeSignature}](
-                 $argName,
-                 $default,
-                 ${arg.name.toString},
-                 ${c.prefix}.read[${arg.typeSignature}](_)
-               )
-             """
+              $argName,
+              $default,
+              ${arg.name.toString},
+              ${c.prefix}.read[${arg.typeSignature}](_)
+            )
+         """
       }
 
-      val bindings = args.foldLeft[Tree](q"Nil") { (old, next) =>
+      val bindings: Tree = args.foldLeft[Tree](q"Nil") { (old, next) =>
         q"$next :: $old"
       }
 
-      val nameNames: Seq[TermName] = flattenedArgLists.map(x => x.name.toTermName)
-      val assignment               = flattenedArgLists.foldLeft[Tree](q"Nil") { (old, next) =>
+      val params    : Seq[TermName] = flattenedArgLists.map(x => x.name.toTermName)
+      val assignment: Tree          = flattenedArgLists.foldLeft[Tree](q"Nil") { (old, next) =>
         pq"scala.::(${next.name.toTermName}: ${next.typeSignature} @unchecked, $old)"
       }
 
-
-      val memSel = memPath.foldLeft(q"($target)") { (cur, nex) =>
-        q"$cur.${c.universe.TermName(nex)}"
+      val memSel: Tree = memPath.foldLeft(q"($target)") { (cur, nex) =>
+        q"$cur.${TermName(nex)}"
       }
 
-      val futurized = futurize(q"$memSel(..$nameNames)", meth)
-      val fullPath  = prefixPath ++ memPath
-      val frag      =
-        cq""" autowire.Core.Request(Seq(..$fullPath), $argName) =>
-             autowire.Internal.doValidate($bindings) match{ case (..$assignment) =>
-               $futurized.map(${c.prefix}.write(_))
-               case _ => ???
-             }
-           """
+      val futurized: Tree = if (params.isEmpty) {
+        // Accessor method
+        futurize(q"$memSel", meth)
+      } else {
+        // Method with params (or empty parenthesis)
+        futurize(q"$memSel(..$params)", meth)
+      }
 
-      frag
+      val fullPath: Seq[String] = prefixPath ++ memPath
+      cq"""autowire.Core.Request(Seq(..$fullPath), $argName) =>
+           autowire.Internal.doValidate($bindings) match { case (..$assignment) =>
+             $futurized.map(${c.prefix}.write(_))
+             case _ => ???
+           }
+         """
     }
 
     def getAllRoutesForClass(
@@ -126,7 +130,7 @@ object Macros {
       target: Expr[Any],
       curCls: Type,
       prefixPath: Seq[String],
-      memPath: Seq[String]): Iterable[c.universe.Tree] = {
+      memPath: Seq[String]): Iterable[Tree] = {
       //See http://stackoverflow.com/questions/15786917/cant-get-inherited-vals-with-scala-reflection
       //Yep case law to program WUNDERBAR!
       getValsOrMeths(curCls).flatMap {
@@ -139,7 +143,6 @@ object Macros {
 
       }
     }
-
   }
 
 
@@ -166,11 +169,14 @@ object Macros {
       // inner tree, and leave instructions on how
       (unwrapTree: Tree, methodName: TermName, args: Seq[Tree], prelude: Seq[Tree], deadNames: Seq[String]@unchecked) = (contents: Tree) match {
         case q"$unwrapTree.$methodName(..$args)"       =>
-          //Normal tree
+          // Method with params (or empty paranthesis)
           (unwrapTree, methodName, args, Nil, Nil)
+        case q"$unwrapTree.$methodName"                =>
+          // Accessor method
+          (unwrapTree, methodName, Nil, Nil, Nil)
         case q"..${statements: List[ValDef]@unchecked}; $thing.$call(..$args)"
           if statements.forall(_.isInstanceOf[ValDef]) =>
-          //Default argument tree
+          // Default argument tree
           val (liveStmts, deadStmts) = statements.tail.partition {
             case ValDef(_, _, _, Select(singleton, name))
               if name.toString.contains("$default") => false

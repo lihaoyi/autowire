@@ -7,6 +7,8 @@ import upickle.default._
 import utest.framework.ExecutionContext.RunNow
 import utest._
 import scala.concurrent.Future
+import acyclic.file
+import utest.PlatformShims.await
 
 
 object UpickleTests extends TestSuite {
@@ -16,9 +18,7 @@ object UpickleTests extends TestSuite {
     def read[T: upickle.default.Reader](t: String): T = upickle.default.read[T](t)
     def routes: Bundle.Server.Router = Server.route[Api](Controller)
   }
-
   import Bundle.{Client, Server}
-  import utest.PlatformShims.await
 
   val tests: Tests = utest.Tests {
     test("example") - {
@@ -61,24 +61,25 @@ object UpickleTests extends TestSuite {
       // combined using the Cake pattern.
 
       trait BookProtocol {
-        // Allow dummy implementations to allow extending API from Client
+        // Allow dummy implementations in API to allow extending API from Client
         // without having to implement methods or being abstract
         // This reverses pull request #58 (https://github.com/lihaoyi/autowire/pull/58)
         def bookList(): Seq[String] = ???
       }
 
       trait ArticleProtocol {
-        def articleList(): Seq[String]
+        // Accessor method (without parenthesis)
+        def articleList: Seq[String]
       }
 
       trait Protocol extends BookProtocol with ArticleProtocol
 
       trait BookController extends BookProtocol {
-        override def bookList(): Seq[String] = Seq("Best Book")
+        override def bookList(): Seq[String] = Seq("Book")
       }
 
       trait ArticleController extends ArticleProtocol {
-        def articleList(): Seq[String] = Seq("Best article")
+        def articleList: Seq[String] = Seq("Article")
       }
 
       object Controller extends Protocol
@@ -97,16 +98,22 @@ object UpickleTests extends TestSuite {
         def read[Result: Reader](p: String): Result = upickle.default.read[Result](p)
 
         override def doCall(req: Request): Future[String] = {
-          // (only for bookList call...)
-          req ==> Request(
-            List("autowire", "UpickleTests", "Protocol", "bookList"),
-            Map()
-          )
+          req.path.last match {
+            case "bookList" => req ==> Request(
+              List("autowire", "UpickleTests", "Protocol", "bookList"),
+              Map()
+            )
+            case "articleList" => req ==> Request(
+              List("autowire", "UpickleTests", "Protocol", "articleList"),
+              Map()
+            )
+          }
           MyServer.routes.apply(req)
         }
       }
 
-      await(MyClient[Protocol].bookList().call()) ==> Seq("Best Book")
+      await(MyClient[Protocol].bookList().call()) ==> Seq("Book")
+      await(MyClient[Protocol].articleList.call()) ==> Seq("Article")
     }
 
     test("basicCalls") - {
@@ -115,14 +122,14 @@ object UpickleTests extends TestSuite {
       val res3 = await(Client[Api].add(1, 2).call())
       val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
       val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-      //   val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
+      //      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
         res3 == "1+2+10",
         res4 == "1.2*2.3",
         res5 == "1.1*2.2*3.3*4.4",
-        //   res6 == Point(11, 22)
+        //        res6 == Point(11, 22)
       )
       Bundle.transmitted.last
     }
