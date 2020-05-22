@@ -16,8 +16,8 @@ trait FakeApi {
   def omg(x: Int): Int
 }
 
-object Controller extends Api {
-  def multiply(x: Double, ys: Seq[Double]): String = x + ys.map("*" + _).mkString
+object Controller extends Api{
+  def multiply(x: Double, ys: Seq[Double]): String = s"$x${ys.map("*"+_).mkString}"
 
   def add(x: Int, y: Int = 1 + 1, z: Int = 10): String = s"$x+$y+$z"
 

@@ -2,7 +2,7 @@
 val baseSettings = Seq(
   organization := "com.lihaoyi",
   name := "autowire",
-  version := "0.2.7",
+  version := "0.2.8-SNAPSHOT",
   scalaVersion := "2.13.2",
   crossScalaVersions := Seq("2.12.11", "2.13.2"),
   scmInfo := Some(ScmInfo(
@@ -16,10 +16,11 @@ val baseSettings = Seq(
     id = "lihaoyi",
     name = "Li Haoyi",
     url = url("https://github.com/lihaoyi")
-  )
+  ),
+  scalacOptions ++= Seq("-deprecation", "-feature")
 )
 
-val autowire = _root_.sbtcrossproject.CrossPlugin.autoImport.crossProject(JSPlatform, JVMPlatform)
+val autowire = crossProject(JSPlatform, JVMPlatform)
   .settings(baseSettings)
   .settings(
     autoCompilerPlugins := true,
