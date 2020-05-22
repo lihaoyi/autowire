@@ -2,7 +2,7 @@
 val baseSettings = Seq(
   organization := "com.lihaoyi",
   name := "autowire",
-  version := "0.2.8-SNAPSHOT",
+  version := "0.2.6",
   scalaVersion := "2.13.2",
   crossScalaVersions := Seq("2.12.11", "2.13.2"),
   scmInfo := Some(ScmInfo(
