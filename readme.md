@@ -46,7 +46,7 @@ Autowire is available at the following maven coordinates, for Scala-JVM and Scal
 This 0.2.8-SNAPSHOT can be used by publishing locally:
 
 ```scala
-git clone https://github.com/marcgrue/autowire.git
+git clone https://github.com/lihaoyi/autowire.git
 cd autowire
 sbt publishLocal
 ```
@@ -58,17 +58,8 @@ libraryDependencies ++= Seq(
   ...
 )
 ```
-If you want to use the "official" version 0.2.7, you can follow the same procedure, just cloning from the main repository:
 
-```scala
-git clone https://github.com/lihaoyi/autowire.git
-cd autowire
-sbt publishLocal
-```
-.. and then publish locally as long as version 0.2.7 hasn't been published to 
-[maven](https://mvnrepository.com/artifact/com.lihaoyi/autowire).
-
-Autowire 0.2.7 and 0.2.8-SNAPSHOT works for both Scala.js 1.x and 0.6.x.
+Autowire works for both Scala.js 1.x and 0.6.x.
 
 Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
 
