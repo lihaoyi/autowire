@@ -41,8 +41,8 @@ Getting Started
 Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS (1.0.0+) respectively:
 
 ```scala
-"com.lihaoyi" %% "autowire" % "0.2.6"
-"com.lihaoyi" %%% "autowire" % "0.2.6"
+"com.lihaoyi" %% "autowire" % "0.3.2"
+"com.lihaoyi" %%% "autowire" % "0.3.2"
 ```
 
 This 0.3.2 can be used by publishing locally:
@@ -295,6 +295,14 @@ https://github.com/lihaoyi/workbench-example-app/tree/autowire
 
 Changelog
 =========
+
+0.3.2
+-----
+- Cross-publish for Scala 2.12 and 2.13
+
+- Update to Scala-js 1.0.0+
+
+- Fix deprecated references
 
 0.2.6
 -----
