@@ -1,4 +1,4 @@
-Autowire 0.2.8-SNAPSHOT
+Autowire 0.3.2
 ==============
 
 Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
