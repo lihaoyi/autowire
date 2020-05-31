@@ -2,7 +2,7 @@
 val baseSettings = Seq(
   organization := "com.lihaoyi",
   name := "autowire",
-  version := "0.2.6",
+  version := "0.3.3-SNAPSHOT",
   scalaVersion := "2.13.2",
   crossScalaVersions := Seq("2.12.11", "2.13.2"),
   scmInfo := Some(ScmInfo(
@@ -29,13 +29,9 @@ val autowire = crossProject(JSPlatform, JVMPlatform)
       "com.lihaoyi" %% "acyclic" % "0.2.0" % Provided,
       "com.lihaoyi" %%% "utest" % "0.7.4" % Test,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.lihaoyi" %%% "upickle" % "1.1.0" % Test
-    ) ++ (
-      if (!scalaVersion.value.startsWith("2.10.")) Nil
-      else Seq(
-        compilerPlugin("org.scalamacros" % s"paradise" % "2.0.0" cross CrossVersion.full),
-        "org.scalamacros" %% s"quasiquotes" % "2.0.0"
-      )
+      "com.lihaoyi" %%% "upickle" % "1.1.0" % Test,
+      "com.typesafe.play" %%% "play-json" % "2.9.0" % Test,
+      "io.suzaku" %%% "boopickle" % "1.3.2" % Test
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
     // Sonatype
@@ -43,9 +39,6 @@ val autowire = crossProject(JSPlatform, JVMPlatform)
     publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2")
 
   ).jsSettings(
-      resolvers ++= Seq(
-        "bintray-alexander_myltsev" at "http://dl.bintray.com/content/alexander-myltsev/maven"
-      ),
       scalaJSStage in Test := FullOptStage,
       scalacOptions += {
         val tagOrHash =
@@ -58,7 +51,7 @@ val autowire = crossProject(JSPlatform, JVMPlatform)
   ).jvmSettings(
     resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
     libraryDependencies ++= Seq(
-      "com.esotericsoftware" % "kryo" % "5.0.0-RC5" % Test
+      "com.esotericsoftware" % "kryo" % "5.0.0-RC6" % Test
     )
   )
 

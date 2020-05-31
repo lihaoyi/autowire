@@ -2,6 +2,7 @@ package autowire
 
 import scala.concurrent.Future
 import language.experimental.macros
+import scala.annotation.compileTimeOnly
 import scala.language.implicitConversions
 
 /**
@@ -23,7 +24,7 @@ object Internal {
    * erased completely when the macro-implementation of `.call()` runs
    */
   class ClientCallable[T] {
-    @ScalaVersionStubs.compileTimeOnly(".call() method is synthetic and should not be used directly")
+    @compileTimeOnly(".call() method is synthetic and should not be used directly")
     def call(): Future[T] = macro Macros.clientMacro[T]
   }
 
