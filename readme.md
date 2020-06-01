@@ -1,6 +1,8 @@
 Autowire 0.3.2
 ==============
 
+[![Scala.js](https://www.scala-js.org/assets/badges/scalajs-1.0.0.svg)](https://www.scala-js.org/)
+
 Autowire is a pair of macros that allows you to perform type-safe, reflection-free RPC between Scala systems. Autowire allows you to write type-safe Ajax/RPC calls that look like:
 
 ```scala    
@@ -36,14 +38,14 @@ Autowire is completely agnostic to both the serialization library, and the trans
 Getting Started
 ===============
 
-Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS respectively:
+Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS (1.0.0+) respectively:
 
 ```scala
 "com.lihaoyi" %% "autowire" % "0.3.2"
 "com.lihaoyi" %%% "autowire" % "0.3.2"
 ```
 
-This 0.3.3-SNAPSHOT can be used by publishing locally:
+This 0.3.2 can be used by publishing locally:
 
 ```scala
 git clone https://github.com/lihaoyi/autowire.git
@@ -54,19 +56,12 @@ And then add a library dependency in your `build.sbt` for your shared project:
 
 ```scala
 libraryDependencies ++= Seq(
-  "com.lihaoyi" %%% "autowire" % "0.3.3-SNAPSHOT",
-  ...
+  "com.lihaoyi" %%% "autowire" % "0.3.2"
 )
 ```
 
-Autowire works with Scala.js 1.x. 
-
-For Scala.js 0.6 users, please use Autowire version 0.2.6: 
-
-```scala
-"com.lihaoyi" %% "autowire" % "0.2.6"
-"com.lihaoyi" %%% "autowire" % "0.2.6"
-```
+Autowire 0.3.2 works for Scala.js 1.x and both Scala 2.12 and 2.13
+For Scala.js 0.6.x users, please use autowire 0.2.6.
 
 Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
 
@@ -302,12 +297,10 @@ Changelog
 
 0.3.2
 -----
-
 - Cross-publish for Scala 2.13.2 and 2.12.11
 - Transpiles to Scala.js 1.1.0
 - Supports dummy implementation in API (`def someMethod() = ???`)
 - Supports accessor method (`def someMethod = ???`)
-
 0.2.6
 -----
 
@@ -316,3 +309,4 @@ Changelog
   inside the `Future` rather than blowing up the call stack
 
 - Cross-publish for Scala 2.12.0
+
