@@ -2,22 +2,25 @@ package autowire
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.nio.ByteBuffer
+import acyclic.file
 import org.objenesis.strategy.StdInstantiatorStrategy
 import utest.PlatformShims.await
 import utest._
 import utest.framework.ExecutionContext.RunNow
 import scala.reflect.ClassTag
 
-
 object InteropTests extends TestSuite {
+
 
   val tests: Tests = utest.Tests {
 
     test("default") {
-      object Bundle extends GenericClientServerBundle[String, upickle.default.Reader, upickle.default.Writer] {
-        def write[T: upickle.default.Writer](t: T): String = upickle.default.write(t)
-        def read[T: upickle.default.Reader](t: String): T = upickle.default.read[T](t)
-        def routes: Bundle.Server.Router = Server.route[Api](Controller)
+      import upickle.default._
+      implicit val pointReadWrite: ReadWriter[Point] = macroRW
+      object Bundle extends GenericClientServerBundle[String, Reader, Writer] {
+        def write[T: Writer](t: T): String = upickle.default.write(t)
+        def read[T: Reader](t: String): T = upickle.default.read[T](t)
+        def routes: Server.Router = Server.route[Api](Controller)
       }
       import Bundle.Client
 
@@ -26,14 +29,14 @@ object InteropTests extends TestSuite {
       val res3 = await(Client[Api].add(1, 2).call())
       val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
       val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-      //      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
+      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
         res3 == "1+2+10",
         res4 == "1.2*2.3",
         res5 == "1.1*2.2*3.3*4.4",
-        //        res6 == Point(11, 22)
+        res6 == Point(11, 22)
       )
       Bundle.transmitted.last
     }
@@ -63,14 +66,14 @@ object InteropTests extends TestSuite {
       val res3 = await(Client[Api].add(1, 2).call())
       val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
       val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-      //      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
+      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
         res3 == "1+2+10",
         res4 == "1.2*2.3",
         res5 == "1.1*2.2*3.3*4.4",
-        //        res6 == Point(11, 22)
+        res6 == Point(11, 22)
       )
       Bundle.transmitted.last
     }
@@ -130,21 +133,20 @@ object InteropTests extends TestSuite {
       val res3 = await(Client[Api].add(1, 2).call())
       val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
       val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-      //      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
+      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
         res3 == "1+2+10",
         res4 == "1.2*2.3",
         res5 == "1.1*2.2*3.3*4.4",
-        //        res6 == Point(11, 22)
+        res6 == Point(11, 22)
       )
       Bundle.transmitted.last
     }
 
     test("booPickle") {
       import boopickle.Default._
-
       object Bundle extends GenericClientServerBundle[ByteBuffer, Pickler, Pickler] {
         def write[Result: Pickler](r: Result): ByteBuffer = Pickle.intoBytes(r)
         def read[Result: Pickler](p: ByteBuffer): Result = Unpickle.apply[Result].fromBytes(p)
@@ -157,14 +159,14 @@ object InteropTests extends TestSuite {
       val res3 = await(Client[Api].add(1, 2).call())
       val res4 = await(Client[Api].multiply(x = 1.2, Seq(2.3)).call())
       val res5 = await(Client[Api].multiply(x = 1.1, ys = Seq(2.2, 3.3, 4.4)).call())
-      //      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
+      val res6 = await(Client[Api].sum(Point(1, 2), Point(10, 20)).call())
       assert(
         res1 == "1+2+3",
         res2 == "1+2+10",
         res3 == "1+2+10",
         res4 == "1.2*2.3",
         res5 == "1.1*2.2*3.3*4.4",
-        //        res6 == Point(11, 22)
+        res6 == Point(11, 22)
       )
       Bundle.transmitted.last
     }

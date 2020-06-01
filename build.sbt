@@ -17,7 +17,7 @@ val baseSettings = Seq(
     name = "Li Haoyi",
     url = url("https://github.com/lihaoyi")
   ),
-  scalacOptions ++= Seq("-deprecation", "-feature")
+  scalacOptions ++= Seq("-deprecation", "-feature", "-language:higherKinds")
 )
 
 val autowire = crossProject(JSPlatform, JVMPlatform)
@@ -49,7 +49,7 @@ val autowire = crossProject(JSPlatform, JVMPlatform)
         s"-P:scalajs:mapSourceURI:$a->$g/"
       }
   ).jvmSettings(
-    resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/",
+    resolvers += "Typesafe Repo" at "https://repo.typesafe.com/typesafe/releases/",
     libraryDependencies ++= Seq(
       "com.esotericsoftware" % "kryo" % "5.0.0-RC6" % Test
     )

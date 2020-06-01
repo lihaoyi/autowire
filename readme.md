@@ -193,10 +193,23 @@ object Core {
 
 In short,
 
-- `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`. Autowire works with any transport and any serialization library, including [Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), [Kryo](https://github.com/EsotericSoftware/kryo) and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with [unit tests](blob/master/jvm/src/test/scala/autowire/InteropTests.scala) to ensure that they are working.
+- `{Client, Server}.{read, write}` is your chance to substitute in whatever serialization library you want. Any library should work, as long as you can put the serialization code into the `read` and `write` functions to serialize an object of type `T`. Autowire works with any transport/serialization library, including 
+[Java-serialization](http://docs.oracle.com/javase/tutorial/jndi/objects/serial.html), 
+[Kryo](https://github.com/EsotericSoftware/kryo), 
+[BooPickle](https://boopickle.suzaku.io), 
+and [Play-Json](https://www.playframework.com/documentation/2.4.x/ScalaJsonCombinators), with 
+[unit tests](blob/master/jvm/src/test/scala/autowire/InteropTests.scala) to ensure that they are working.
 - `Client.doCall` and `Server.route` is your chance to choose whatever transport mechanism you want to use. By that point, the arguments/return-value have already been mostly serialized, with only a small amount of structure (e.g. the map of argument-names to serialized-values) left behind. Exactly how you get the `Request` object from the `Client` to the `Server` (HTTP, TCP, etc.) and the response-data back is up to you as long as you can give Autowire a `Future[PickleType]` in exchange for its `Request`.  
 
 If you still don't fully understand, and need help getting something working, take a look at the [complete example](https://github.com/lihaoyi/workbench-example-app/tree/autowire).  
+
+Test
+==============
+
+```
+sbt ++2.12.11 autowireJVM/test autowireJS/test
+sbt ++2.13.2 autowireJVM/test autowireJS/test
+```
 
 Error Handling
 ==============

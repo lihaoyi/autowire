@@ -13,6 +13,7 @@ import utest.PlatformShims.await
 
 object UpickleTests extends TestSuite {
 
+  implicit val rw: ReadWriter[Point] = macroRW
   object Bundle extends GenericClientServerBundle[String, upickle.default.Reader, upickle.default.Writer] {
     def write[T: upickle.default.Writer](t: T): String = upickle.default.write(t)
     def read[T: upickle.default.Reader](t: String): T = upickle.default.read[T](t)

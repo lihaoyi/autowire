@@ -9,7 +9,7 @@ trait Api {
 
   def sloww(s: Seq[String]): Future[Seq[Int]]
 
-  //def sum(p1: Point, p2: Point): Point
+  def sum(p1: Point, p2: Point): Point
 }
 
 trait FakeApi {
@@ -25,7 +25,7 @@ object Controller extends Api{
 
   def subtract(x: Int, y: Int = 1 + 1): String = s"$x-$y"
 
-//  def sum(p1: Point, p2: Point): Point = Point(p1.x + p2.x, p1.y + p2.y)
+  def sum(p1: Point, p2: Point): Point = Point(p1.x + p2.x, p1.y + p2.y)
 }
 
 case class Point(x: Int, y: Int)
