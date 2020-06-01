@@ -1,3 +1,4 @@
+import sbtcrossproject.CrossProject
 
 val baseSettings = Seq(
   organization := "com.lihaoyi",
@@ -31,29 +32,33 @@ val autowire = crossProject(JSPlatform, JVMPlatform)
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "com.lihaoyi" %%% "upickle" % "1.1.0" % Test,
       "com.typesafe.play" %%% "play-json" % "2.9.0" % Test,
-      "io.suzaku" %%% "boopickle" % "1.3.2" % Test
+      //      "io.suzaku" %%% "boopickle" % "1.3.2" % Test
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
-    // Sonatype
     publishArtifact in Test := false,
-    publishTo := Some("releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-  ).jsSettings(
-      scalaJSStage in Test := FullOptStage,
-      scalacOptions += {
-        val tagOrHash =
-          if (isSnapshot.value) sys.process.Process("git rev-parse HEAD").lineStream_!.head
-          else "v" + version.value
-        val a = (baseDirectory in LocalRootProject).value.toURI.toString
-        val g = "https://raw.githubusercontent.com/lihaoyi/autowire/" + tagOrHash
-        s"-P:scalajs:mapSourceURI:$a->$g/"
-      }
-  ).jvmSettings(
+    publishTo := Some("releases" at "https://oss.sonatype.org/service/local/staging/deploy/maven2")
+  )
+  .jsSettings(
+    scalaJSStage in Test := FullOptStage,
+    scalacOptions += {
+      val tagOrHash =
+        if (isSnapshot.value) sys.process.Process("git rev-parse HEAD").lineStream_!.head
+        else "v" + version.value
+      val a         = (baseDirectory in LocalRootProject).value.toURI.toString
+      val g         = "https://raw.githubusercontent.com/lihaoyi/autowire/" + tagOrHash
+      s"-P:scalajs:mapSourceURI:$a->$g/"
+    }
+  )
+  .jvmSettings(
     resolvers += "Typesafe Repo" at "https://repo.typesafe.com/typesafe/releases/",
     libraryDependencies ++= Seq(
-      "com.esotericsoftware" % "kryo" % "5.0.0-RC6" % Test
+      // Latest Kryo apparently have some problems with Java generics
+      // https://github.com/EsotericSoftware/kryo/pull/683
+      //      "com.esotericsoftware" % "kryo" % "5.0.0-RC6" % Test
+      // Rolling back to latest stable release allows 2.12.11 test to pass
+      "com.esotericsoftware" % "kryo" % "4.0.2" % Test
     )
   )
 
-lazy val autowireJS = autowire.js
+lazy val autowireJS  = autowire.js
 lazy val autowireJVM = autowire.jvm
