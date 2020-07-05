@@ -4,7 +4,6 @@ import upickle.default._
 import utest._
 import scala.concurrent.Future
 
-//This test should only be run in 2.11+ since 2.10 will not enforce this annotation
 object CompileTimeOnlyTests extends TestSuite {
 
   import scala.concurrent.ExecutionContext.Implicits.global
