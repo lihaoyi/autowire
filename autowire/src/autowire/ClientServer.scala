@@ -1,6 +1,7 @@
 package autowire
 
 import scala.concurrent.Future
+import scala.language.higherKinds
 import scala.language.experimental.macros
 
 /**

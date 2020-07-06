@@ -10,7 +10,6 @@ import scala.concurrent.Future
 import acyclic.file
 import utest.PlatformShims.await
 
-
 object UpickleTests extends TestSuite {
 
   object Bundle extends GenericClientServerBundle[String, upickle.default.Reader, upickle.default.Writer] {
@@ -128,7 +127,7 @@ object UpickleTests extends TestSuite {
         res2 == "1+2+10",
         res3 == "1+2+10",
         res4 == "1.2*2.3",
-        res5 == "1.1*2.2*3.3*4.4",
+        res5 == "1.1*2.2*3.3*4.4"
         //        res6 == Point(11, 22)
       )
       Bundle.transmitted.last

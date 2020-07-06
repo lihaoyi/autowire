@@ -1,4 +1,7 @@
 package autowire
+
+import scala.language.higherKinds
+
 /**
  * Utility classes to fit 0 or 2 context bounds into 1
  */

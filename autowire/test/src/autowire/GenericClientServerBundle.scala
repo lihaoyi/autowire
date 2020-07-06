@@ -1,6 +1,7 @@
 package autowire
 import scala.collection.mutable
 import scala.concurrent.Future
+import scala.language.higherKinds
 
 /**
 * A generic client-server implementation, which does everything locally but

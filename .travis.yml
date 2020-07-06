@@ -1,17 +1,33 @@
+os: linux
 language: scala
-scala:
-  - 2.12.11
-  - 2.13.2
-sudo: false
-jdk:
-  - openjdk8
-  - openjdk9
-  - openjdk10
-script:
-  - sbt ++$TRAVIS_SCALA_VERSION autowireJVM/test autowireJS/test
-  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
-  - find $HOME/.sbt -name "*.lock" -print -delete
-cache:
-  directories:
-    - $HOME/.ivy2/cache
-    - $HOME/.sbt/boot/
+stages:
+  - name: test
+  - name: release
+    if: (branch = master AND type = push) OR (tag IS present)
+jobs:
+  include:
+  - script: "./mill __.js.__.test"
+    jdk: openjdk11
+
+  - script: "./mill __.jvm.__.test"
+    jdk: openjdk11
+
+  - script: "./mill __.native.__.test"
+    jdk: openjdk8
+    before_install:
+      - curl https://raw.githubusercontent.com/scala-native/scala-native/master/scripts/travis_setup.sh | bash -x
+
+  - stage: release
+    script:
+      - echo "$PGP_SECRET" | base64 --decode | gpg --import
+      - ./mill __.jvm[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
+
+  - stage: release
+    script:
+      - echo "$PGP_SECRET" | base64 --decode | gpg --import
+      - ./mill __.js[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
+
+  - stage: release
+    script:
+      - echo "$PGP_SECRET" | base64 --decode | gpg --import
+      - ./mill __.native[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"

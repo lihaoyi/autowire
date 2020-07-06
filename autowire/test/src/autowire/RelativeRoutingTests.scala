@@ -27,11 +27,13 @@ object RelativeRoutingTests extends TestSuite {
       // server-side implementation, and router
       class MyApiImpl(c: String) extends MagicalApi {
         override def resetGame(): Seq[String] = ???
-        override val table: TableApi = (playerId: String) => {
-          if (playerId == "Ben") {
-            goodHand
-          } else {
-            Nil
+        override val table: TableApi = new TableApi {
+          def getHand(playerId: String): Seq[String] = {
+            if (playerId == "Ben") {
+              goodHand
+            } else {
+              Nil
+            }
           }
         }
         override def shuffle(x: Int, s: String, d: String = "Foo"): String = s"$x:$s:$d"
