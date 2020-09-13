@@ -19,7 +19,7 @@ object autowire extends Module{
 
   object js extends Cross[autowireJsModule](crossVersions:_*)
   class autowireJsModule(val crossScalaVersion: String) extends AutowireModule with ScalaJSModule{
-    def scalaJSVersion = "1.0.0"
+    def scalaJSVersion = "1.2.0"
     object test extends CommonTestModule with Tests
   }
 
@@ -36,6 +36,7 @@ trait AutowireModule extends CrossScalaModule with PublishModule{
     ivy"com.lihaoyi::acyclic:${acyclicVersion(scalaVersion())}",
     ivy"org.scala-lang:scala-reflect:${scalaVersion()}"
   )
+  def artifactName = "autowire"
   def publishVersion = "0.3.2"
   def pomSettings = PomSettings(
     description = artifactName(),
