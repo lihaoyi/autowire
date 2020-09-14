@@ -6,13 +6,13 @@ stages:
     if: (branch = master AND type = push) OR (tag IS present)
 jobs:
   include:
-  - script: "./mill __.js.__.test"
+  - script: "./mill -j $(nproc) __.js.__.test"
     jdk: openjdk11
 
-  - script: "./mill __.jvm.__.test"
+  - script: "./mill -j $(nproc) __.jvm.__.test"
     jdk: openjdk11
 
-  - script: "./mill __.native.__.test"
+  - script: "./mill -j $(nproc) __.native.__.test"
     jdk: openjdk8
     before_install:
       - curl https://raw.githubusercontent.com/scala-native/scala-native/master/scripts/travis_setup.sh | bash -x
@@ -20,14 +20,14 @@ jobs:
   - stage: release
     script:
       - echo "$PGP_SECRET" | base64 --decode | gpg --import
-      - ./mill __.jvm[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
+      - ./mill -j $(nproc) __.jvm[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
 
   - stage: release
     script:
       - echo "$PGP_SECRET" | base64 --decode | gpg --import
-      - ./mill __.js[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
+      - ./mill -j $(nproc) __.js[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
 
   - stage: release
     script:
       - echo "$PGP_SECRET" | base64 --decode | gpg --import
-      - ./mill __.native[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
+      - ./mill -j $(nproc) __.native[__].publish --sonatypeCreds "$SONATYPE_USERNAME:$SONATYPE_PASSWORD" --release true --gpgPassphrase "$PGP_PASSPHRASE"
