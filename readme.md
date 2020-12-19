@@ -286,7 +286,7 @@ Autowire can only serialize and deserialize things that the chosen serialization
 
 Autowire does not support method overloading and type parameters on the interfaces/traits used for making the RPCs.
  
-Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing. It is up to the developer using Autowire to decide how he wants to transport the serialized data back and forth, how he wants to respond to errors, etc.
+Apart from that, Autowire is a pretty thin layer on top of any existing serialization library and transport layer, and does not project much functionality apart from routing. It is up to the developer using Autowire to decide how they want to transport the serialized data back and forth, how they want to respond to errors, etc.
 
 To see a simple example involving a ScalaJS client and Spray server, check out this example:
 
