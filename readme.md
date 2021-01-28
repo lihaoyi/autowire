@@ -1,4 +1,4 @@
-Autowire 0.3.2
+Autowire 0.3.3
 ==============
 
 [![Scala.js](https://www.scala-js.org/assets/badges/scalajs-1.0.0.svg)](https://www.scala-js.org/)
@@ -38,30 +38,31 @@ Autowire is completely agnostic to both the serialization library, and the trans
 Getting Started
 ===============
 
-Autowire is available at the following maven coordinates, for Scala-JVM and Scala-JS (1.0.0+) respectively:
+Autowire is available at the following maven coordinates:
 
 ```scala
-"com.lihaoyi" %% "autowire" % "0.3.2"
-"com.lihaoyi" %%% "autowire" % "0.3.2"
+"com.lihaoyi" %% "autowire" % "0.3.3" // for Scala-JVM
+"com.lihaoyi" %%% "autowire" % "0.3.3" // Scala.js (1.4.0+) and Scala Native (0.4.0)
 ```
 
-This 0.3.2 can be used by publishing locally:
+This 0.3.3 can be used by publishing locally:
 
 ```scala
 git clone https://github.com/lihaoyi/autowire.git
 cd autowire
-sbt publishLocal
+./mill __.publishLocal
 ```
+
 And then add a library dependency in your `build.sbt` for your shared project:
 
 ```scala
 libraryDependencies ++= Seq(
-  "com.lihaoyi" %%% "autowire" % "0.3.2",
+  "com.lihaoyi" %%% "autowire" % "0.3.3",
   ...
 )
 ```
 
-Autowire 0.3.2 works for Scala.js 1.x and both Scala 2.12 and 2.13
+Autowire 0.3.3 works for Scala.js 1.x and both Scala 2.12 and 2.13
 For Scala.js 0.6.x users, please use autowire 0.2.6.
 
 Autowire works on both Scala-JVM and Scala-JS, meaning you can use it to get type-safe Ajax calls between a browser and your servers.
@@ -296,8 +297,14 @@ https://github.com/lihaoyi/workbench-example-app/tree/autowire
 Changelog
 =========
 
+0.3.3
+-----
+
+- Update to Scala Native 0.4.0
+
 0.3.2
 -----
+
 - Cross-publish for Scala 2.12 and 2.13
 
 - Update to Scala-js 1.0.0+
