@@ -228,7 +228,7 @@ object UpickleTests extends TestSuite {
         test("invalidJson") - {
           test - check(Map("x" -> "]", "ys" -> "2}34")) {
             case Error.InvalidInput(
-            Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _)),
+            Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _, _, _)),
             Error.Param.Invalid("ys", AbortException("expected sequence got number", _, _, _, _))
             ) =>
           }
@@ -239,7 +239,7 @@ object UpickleTests extends TestSuite {
           }
           test - check(Map("x" -> "]", "ys" -> "[234]")) {
             case Error.InvalidInput(
-            Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _))
+            Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _, _, _))
             ) =>
           }
         }
@@ -247,7 +247,7 @@ object UpickleTests extends TestSuite {
         test("mix") - {
           test - check(Map("x" -> "]")) {
             case Error.InvalidInput(
-            Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _)),
+            Error.Param.Invalid("x", ParseException("expected json value got ] (line 1, column 1)", _, _, _)),
             Error.Param.Missing("ys")
             ) =>
           }
