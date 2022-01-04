@@ -2,3 +2,8 @@
 *.iml
 .idea/
 /lowered.hnir
+/target
+/target/*
+/project
+/project/*
+.bsp
